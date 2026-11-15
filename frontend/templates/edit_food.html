@@ -1,0 +1,193 @@
+
+{% extends "base.html" %}
+
+{% block title %}Chỉnh sửa món ăn | RestoMenu{% endblock %}
+
+{% block content %}
+<div class="app-container">
+
+    <aside class="sidebar">
+        <div class="brand">
+            <div class="brand-icon">R</div>
+            <div>
+                <h3>RestoMenu</h3>
+                <span>JAPANESE RESTAURANT</span>
+            </div>
+        </div>
+
+        <p class="menu-label">MENU CHÍNH</p>
+        <a href="/" class="menu-item">▦ Tổng quan</a>
+        <a href="/foods" class="menu-item active">🍜 Quản lý món ăn</a>
+        <a href="/categories" class="menu-item">▤ Danh mục</a>
+
+        <div class="sidebar-bottom">
+            <p>RESTOMENU SYSTEM</p>
+            <small>Phiên bản 1.0</small>
+        </div>
+    </aside>
+
+    <main class="main-content">
+
+        <header class="topbar">
+            <div>
+                <h2>Chỉnh sửa món ăn</h2>
+                <p>Cập nhật thông tin món ăn trong thực đơn.</p>
+            </div>
+
+            <div class="admin-info">
+                <div class="avatar">A</div>
+                <div>
+                    <strong>Quản trị viên</strong>
+                    <small>Administrator</small>
+                </div>
+            </div>
+        </header>
+
+        <div class="breadcrumb">
+            <a href="/foods">Quản lý món ăn</a>
+            <span>/</span>
+            <strong>Chỉnh sửa món ăn</strong>
+        </div>
+
+        <section class="content-card food-form-card">
+
+            <div class="form-heading">
+                <div>
+                    <h3>Cập nhật thông tin món ăn</h3>
+                    <p>Đang chỉnh sửa món có mã MA{{ "%03d"|format(food_id) }}.</p>
+                </div>
+                <span class="form-icon">🍜</span>
+            </div>
+
+            <form id="editFoodForm" class="food-form">
+
+                <div class="form-section-title">
+                    <span>01</span>
+                    Thông tin cơ bản
+                </div>
+
+                <div class="form-grid">
+
+                    <div class="form-group">
+                        <label>Mã món ăn</label>
+                        <input
+                            type="text"
+                            value="MA{{ '%03d'|format(food_id) }}"
+                            readonly
+                        >
+                    </div>
+
+                    <div class="form-group">
+                        <label for="foodName">Tên món ăn <span>*</span></label>
+                        <input
+                            type="text"
+                            id="foodName"
+                            maxlength="300"
+                            placeholder="Nhập tên món ăn"
+                            required
+                        >
+                    </div>
+
+                    <div class="form-group">
+                        <label for="foodCategory">Danh mục <span>*</span></label>
+                        <select id="foodCategory" required>
+                            <option value="">Đang tải danh mục...</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="foodPrice">Giá bán (VNĐ) <span>*</span></label>
+                        <input
+                            type="number"
+                            id="foodPrice"
+                            min="1"
+                            max="9999999999999999"
+                            step="1"
+                            placeholder="Nhập giá bán"
+                            required
+                        >
+                    </div>
+
+                </div>
+
+                <div class="form-group full-width">
+                    <label for="foodDescription">Mô tả món ăn</label>
+                    <textarea
+                        id="foodDescription"
+                        rows="4"
+                        maxlength="1000"
+                        placeholder="Nhập mô tả món ăn"
+                    ></textarea>
+                </div>
+
+                <div class="form-section-title">
+                    <span>02</span>
+                    Hình ảnh món ăn
+                </div>
+
+                <div class="image-upload-layout">
+
+                    <label class="upload-area" for="editFoodImage">
+                        <div class="upload-icon">↑</div>
+                        <strong>Thay đổi hình ảnh</strong>
+                        <span>Nhấn để chọn ảnh mới từ máy tính</span>
+                        <small>JPG, PNG hoặc WEBP, tối đa 5MB</small>
+                        <input
+                            type="file"
+                            id="editFoodImage"
+                            accept="image/png,image/jpeg,image/webp"
+                            hidden
+                        >
+                    </label>
+
+                    <div class="image-preview-box">
+                        <span class="preview-label">XEM TRƯỚC HÌNH ẢNH</span>
+                        <img
+                            id="editImagePreview"
+                            class="image-preview"
+                            alt="Ảnh món ăn"
+                            style="display:none; max-width:100%;"
+                        >
+                        <button
+                            type="button"
+                            id="removeEditImage"
+                            class="remove-image-btn"
+                            hidden
+                        >
+                            Xóa ảnh mới
+                        </button>
+                    </div>
+
+                </div>
+
+                <div class="form-section-title">
+                    <span>03</span>
+                    Trạng thái món ăn
+                </div>
+
+                <div class="form-group full-width">
+                    <label for="foodStatus">Trạng thái phục vụ</label>
+                    <select id="foodStatus">
+                        <option value="1">Đang phục vụ</option>
+                        <option value="0">Ngừng phục vụ</option>
+                    </select>
+                </div>
+
+                <div class="form-actions">
+                    <a href="/foods" class="secondary-btn">Hủy bỏ</a>
+
+                    <button type="reset" class="reset-btn">
+                        Khôi phục
+                    </button>
+
+                    <button type="submit" class="primary-btn">
+                        Lưu thay đổi
+                    </button>
+                </div>
+
+            </form>
+
+        </section>
+    </main>
+</div>
+{% endblock %}
