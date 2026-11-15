@@ -1,0 +1,135 @@
+
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid py-4">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold mb-1">Quản lý món ăn</h2>
+            <p class="text-muted mb-0">Quản lý thực đơn nhà hàng RestoMenu</p>
+        </div>
+
+        <a href="/foods/add" class="btn btn-primary">
+            + Thêm món ăn
+        </a>
+    </div>
+
+    <!-- THỐNG KÊ -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card shadow-sm border-0">
+                <div class="card-body">
+                    <p class="text-muted mb-1">Tổng số món ăn</p>
+                    <h3 class="fw-bold" id="totalFoods">0</h3>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card shadow-sm border-0">
+                <div class="card-body">
+                    <p class="text-muted mb-1">Đang phục vụ</p>
+                    <h3 class="fw-bold text-success" id="availableFoods">0</h3>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card shadow-sm border-0">
+                <div class="card-body">
+                    <p class="text-muted mb-1">Ngừng phục vụ</p>
+                    <h3 class="fw-bold text-danger" id="unavailableFoods">0</h3>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card shadow-sm border-0">
+                <div class="card-body">
+                    <p class="text-muted mb-1">Danh mục</p>
+                    <h3 class="fw-bold" id="totalCategories">0</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TÌM KIẾM VÀ LỌC -->
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-5">
+                    <label for="foodSearch" class="form-label">
+                        Tìm kiếm món ăn
+                    </label>
+                    <input
+                        type="text"
+                        id="foodSearch"
+                        class="form-control"
+                        placeholder="Nhập tên món ăn..."
+                    >
+                </div>
+
+                <div class="col-md-3">
+                    <label for="categoryFilter" class="form-label">
+                        Danh mục
+                    </label>
+                    <select id="categoryFilter" class="form-select">
+                        <option value="">Tất cả danh mục</option>
+                    </select>
+                </div>
+
+                <div class="col-md-4">
+                    <label for="statusFilter" class="form-label">
+                        Trạng thái
+                    </label>
+                    <select id="statusFilter" class="form-select">
+                        <option value="">Tất cả trạng thái</option>
+                        <option value="available">Đang phục vụ</option>
+                        <option value="unavailable">Ngừng phục vụ</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- BẢNG MÓN ĂN -->
+    <div class="card shadow-sm border-0">
+        <div class="card-header bg-white py-3">
+            <h5 class="fw-bold mb-0">Danh sách món ăn</h5>
+        </div>
+
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="ps-3">Mã món</th>
+                            <th>Tên món ăn</th>
+                            <th>Danh mục</th>
+                            <th>Giá bán</th>
+                            <th>Trạng thái</th>
+                            <th>Thao tác</th>
+                        </tr>
+                    </thead>
+
+                    <tbody id="foodTableBody">
+                        <tr>
+                            <td colspan="6" class="text-center py-4">
+                                Đang tải dữ liệu món ăn...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="card-footer bg-white">
+            <span id="resultCount" class="text-muted">
+                Đang tải dữ liệu...
+            </span>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

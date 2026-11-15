@@ -1,0 +1,104 @@
+
+{% extends "base.html" %}
+
+{% block title %}Dashboard | RestoMenu{% endblock %}
+
+{% block content %}
+
+<div class="app-container">
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="brand">
+            <div class="brand-icon">R</div>
+            <div>
+                <h3>RestoMenu</h3>
+                <span>RESTAURANT MANAGEMENT</span>
+            </div>
+        </div>
+
+        <p class="menu-label">MENU CHÍNH</p>
+
+        <a href="/" class="menu-item active">▦ Tổng quan</a>
+        <a href="/foods" class="menu-item">🍽 Quản lý món ăn</a>
+        <a href="/categories" class="menu-item">▤ Danh mục</a>
+
+        <div class="sidebar-bottom">
+            <p>RESTOMENU SYSTEM</p>
+            <small>Phiên bản 1.0</small>
+        </div>
+    </aside>
+
+    <!-- Main content -->
+    <main class="main-content">
+
+        <header class="topbar">
+            <div>
+                <h2>Tổng quan</h2>
+                <p>Chào mừng bạn đến với hệ thống RestoMenu</p>
+            </div>
+
+            <div class="admin-info">
+                <div class="avatar">A</div>
+                <div>
+                    <strong>Quản trị viên</strong>
+                    <small>Administrator</small>
+                </div>
+            </div>
+        </header>
+
+        <section class="welcome">
+            <div>
+                <span>RESTOMENU DASHBOARD</span>
+                <h1>Quản lý nhà hàng<br>thật đơn giản!</h1>
+                <p>Theo dõi và quản lý thực đơn của bạn tại một nơi.</p>
+            </div>
+            <div class="welcome-icon">🍜</div>
+        </section>
+
+        <h3 class="section-title">Tổng quan hệ thống</h3>
+
+        <section class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon">🍽</div>
+                <p>Tổng số món ăn</p>
+                <h2>0</h2>
+                <small>Trong thực đơn</small>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon">▤</div>
+                <p>Danh mục</p>
+                <h2>0</h2>
+                <small>Nhóm món ăn</small>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon">✓</div>
+                <p>Đang phục vụ</p>
+                <h2>0</h2>
+                <small>Món đang kinh doanh</small>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon">×</div>
+                <p>Ngừng phục vụ</p>
+                <h2>0</h2>
+                <small>Món tạm ngừng</small>
+            </div>
+        </section>
+
+        <section class="content-card">
+            <div class="card-heading">
+                <div>
+                    <h3>Chào mừng đến với RestoMenu</h3>
+                    <p>Bắt đầu quản lý thực đơn nhà hàng của bạn.</p>
+                </div>
+                <a href="/foods" class="primary-btn">Quản lý món ăn →</a>
+            </div>
+        </section>
+
+    </main>
+</div>
+
+{% endblock %}

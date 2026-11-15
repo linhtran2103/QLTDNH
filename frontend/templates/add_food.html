@@ -1,0 +1,152 @@
+
+{% extends "base.html" %}
+
+{% block title %}Thêm món ăn mới | RestoMenu{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold mb-1">Thêm món ăn mới</h2>
+            <p class="text-muted mb-0">Nhập thông tin món ăn vào thực đơn</p>
+        </div>
+
+        <a href="/foods" class="btn btn-outline-secondary">
+            Quay lại
+        </a>
+    </div>
+
+    <div class="card border-0 shadow-sm">
+        <div class="card-body p-4">
+
+            <form id="addFoodForm">
+                <div class="row g-4">
+
+                    <div class="col-md-6">
+                        <label for="foodCode" class="form-label fw-semibold">
+                            Mã món ăn <span class="text-danger">*</span>
+                        </label>
+                        <input
+                            type="text"
+                            class="form-control"
+                            id="foodCode"
+                            maxlength="50"
+                            placeholder="Ví dụ: MON001"
+                            required
+                        >
+                    </div>
+
+                    <div class="col-md-6">
+                        <label for="foodName" class="form-label fw-semibold">
+                            Tên món ăn <span class="text-danger">*</span>
+                        </label>
+                        <input
+                            type="text"
+                            class="form-control"
+                            id="foodName"
+                            maxlength="300"
+                            placeholder="Ví dụ: Mì Ramen Nhật Bản"
+                            required
+                        >
+                    </div>
+
+                    <div class="col-md-6">
+                        <label for="foodCategory" class="form-label fw-semibold">
+                            Danh mục <span class="text-danger">*</span>
+                        </label>
+                        <select
+                            class="form-select"
+                            id="foodCategory"
+                            required
+                        >
+                            <option value="">Đang tải danh mục...</option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label for="foodPrice" class="form-label fw-semibold">
+                            Giá bán (VNĐ) <span class="text-danger">*</span>
+                        </label>
+                        <input
+                            type="number"
+                            class="form-control"
+                            id="foodPrice"
+                            min="1"
+                            step="1"
+                            placeholder="Ví dụ: 45000"
+                            required
+                        >
+                    </div>
+
+                    <div class="col-12">
+                        <label for="foodDescription" class="form-label fw-semibold">
+                            Mô tả món ăn
+                        </label>
+                        <textarea
+                            class="form-control"
+                            id="foodDescription"
+                            rows="4"
+                            maxlength="1000"
+                            placeholder="Nhập mô tả món ăn..."
+                        ></textarea>
+                    </div>
+
+                    <div class="col-12">
+                        <label for="foodImage" class="form-label fw-semibold">
+                            Hình ảnh món ăn
+                        </label>
+                        <input
+                            type="file"
+                            class="form-control"
+                            id="foodImage"
+                            accept=".jpg,.jpeg,.png,.webp"
+                        >
+
+                        <div class="mt-3">
+                            <img
+                                id="imagePreview"
+                                src=""
+                                alt="Xem trước ảnh món ăn"
+                                style="display:none; max-width:250px; max-height:200px; object-fit:cover;"
+                                class="rounded border"
+                            >
+                        </div>
+
+                        <button
+                            type="button"
+                            id="removeImage"
+                            class="btn btn-sm btn-outline-danger mt-2"
+                            style="display:none;"
+                        >
+                            Xóa ảnh
+                        </button>
+
+                        <small class="text-muted d-block mt-2">
+                            JPG, PNG hoặc WEBP. Tối đa 5MB.
+                        </small>
+                    </div>
+
+                </div>
+
+                <hr class="my-4">
+
+                <div class="d-flex gap-2 justify-content-end">
+                    <a href="/foods" class="btn btn-outline-secondary">
+                        Hủy
+                    </a>
+
+                    <button
+                        type="submit"
+                        id="saveFoodButton"
+                        class="btn btn-primary"
+                    >
+                        Lưu món ăn
+                    </button>
+                </div>
+            </form>
+
+        </div>
+    </div>
+</div>
+{% endblock %}
