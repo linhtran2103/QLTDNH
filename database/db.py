@@ -1,11 +1,15 @@
 
 import os
 import pyodbc
+from pathlib import Path
 from dotenv import load_dotenv
 from decimal import Decimal
 
-# Đọc cấu hình trong file .env
-load_dotenv(override=True)
+# Đọc file .env nằm trong thư mục backend
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+ENV_FILE = PROJECT_ROOT / "backend" / ".env"
+
+load_dotenv(ENV_FILE, override=True)
 
 
 # =====================================================

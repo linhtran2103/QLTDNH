@@ -1,5 +1,4 @@
 
-
 from flask import Flask, jsonify, request, g, render_template
 from flask_cors import CORS
 from werkzeug.security import check_password_hash, generate_password_hash
@@ -7,15 +6,45 @@ from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
 from functools import wraps
 
 import os
+import sys
+from pathlib import Path
 from dotenv import load_dotenv
 
-from database import (
+# Xác định đường dẫn dự án
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+BACKEND_DIR = PROJECT_ROOT / "backend"
+
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+# Đọc file .env
+ENV_FILE = BACKEND_DIR / ".env"
+load_dotenv(dotenv_path=ENV_FILE, override=True)
+
+# Kết nối database
+from database.db import (
     get_connection,
     dong_ket_noi,
     convert_to_json,
     convert_one_to_json
 )
 
+# Khởi tạo Flask
+app = Flask(
+    __name__,
+    template_folder=str(PROJECT_ROOT / "frontend" / "templates"),
+    static_folder=str(PROJECT_ROOT / "frontend" / "static")
+)
+
+CORS(app, allow_headers=["Content-Type", "Authorization"])
+
+# Cấu hình bảo mật
+SECRET_KEY = os.getenv("SECRET_KEY")
+
+if not SECRET_KEY:
+    raise RuntimeError("Chưa cấu hình SECRET_KEY trong file backend/.env")
+
+serializer = URLSafeTimedSerializer(SECRET_KEY)
 
 # =====================================================
 # 1. KHỞI TẠO FLASK VÀ CẤU HÌNH
@@ -50,7 +79,7 @@ if not SECRET_KEY:
         "Chưa cấu hình SECRET_KEY trong file .env"
     )
 
-serializer = URLSafeTimedSerializer(SECRET_KEY)
+
 
 
 # =====================================================
