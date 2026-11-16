@@ -1,102 +1,186 @@
 
 {% extends "base.html" %}
 
-{% block title %}Dashboard | RestoMenu{% endblock %}
+{% block title %}Tổng quan | RestoMenu{% endblock %}
 
 {% block content %}
 
 <div class="app-container">
 
-    <!-- Sidebar -->
+    <!-- SIDEBAR -->
     <aside class="sidebar">
         <div class="brand">
-            <div class="brand-icon">R</div>
+            <div class="brand-icon">日</div>
             <div>
                 <h3>RestoMenu</h3>
-                <span>RESTAURANT MANAGEMENT</span>
+                <span>JAPANESE RESTAURANT</span>
             </div>
         </div>
 
         <p class="menu-label">MENU CHÍNH</p>
 
-        <a href="/" class="menu-item active">▦ Tổng quan</a>
-        <a href="/foods" class="menu-item">🍽 Quản lý món ăn</a>
-        <a href="/categories" class="menu-item">▤ Danh mục</a>
+        <a href="/" class="menu-item active">
+            <span>⌂</span> Tổng quan
+        </a>
+
+        <a href="/foods" class="menu-item">
+            <span>◈</span> Quản lý món ăn
+        </a>
+
+        <a href="/categories" class="menu-item">
+            <span>▦</span> Danh mục
+        </a>
 
         <div class="sidebar-bottom">
-            <p>RESTOMENU SYSTEM</p>
-            <small>Phiên bản 1.0</small>
+            <span class="sidebar-bottom-icon">✦</span>
+            <div>
+                <strong>RESTOMENU SYSTEM</strong>
+                <small>Restaurant Management</small>
+            </div>
         </div>
     </aside>
 
-    <!-- Main content -->
+    <!-- MAIN CONTENT -->
     <main class="main-content">
 
+        <!-- TOPBAR -->
         <header class="topbar">
             <div>
-                <h2>Tổng quan</h2>
-                <p>Chào mừng bạn đến với hệ thống RestoMenu</p>
+                <span class="topbar-caption">RESTAURANT MANAGEMENT SYSTEM</span>
+                <h2>Tổng quan hệ thống</h2>
             </div>
 
             <div class="admin-info">
                 <div class="avatar">A</div>
                 <div>
-                    <strong>Quản trị viên</strong>
-                    <small>Administrator</small>
+                    <strong data-user-name>Quản trị viên</strong>
+                    <small data-user-role>Administrator</small>
                 </div>
             </div>
         </header>
 
-        <section class="welcome">
+       <!-- HERO BANNER -->
+<section class="welcome">
+    <div class="welcome-content">
+        <span class="welcome-label">WELCOME TO RESTOMENU</span>
+
+        <h1>NGHỆ THUẬT<br>ẨM THỰC NHẬT</h1>
+
+        <p>
+            Quản lý thực đơn tinh gọn.
+            Kiến tạo trải nghiệm ẩm thực hoàn hảo.
+        </p>
+
+        <a href="/foods" class="primary-btn">
+            Khám phá thực đơn <span>→</span>
+        </a>
+    </div>
+
+    <div class="welcome-icon">
+        <span>和</span>
+        <small>JAPANESE CUISINE</small>
+    </div>
+</section>
+        <!-- PAGE INTRODUCTION -->
+        <div class="dashboard-section-heading">
             <div>
-                <span>RESTOMENU DASHBOARD</span>
-                <h1>Quản lý nhà hàng<br>thật đơn giản!</h1>
-                <p>Theo dõi và quản lý thực đơn của bạn tại một nơi.</p>
+                <span class="section-eyebrow">SYSTEM OVERVIEW</span>
+                <h3>Tổng quan hệ thống</h3>
+                <p>Các thông tin chính trong hoạt động quản lý thực đơn.</p>
             </div>
-            <div class="welcome-icon">🍜</div>
-        </section>
+        </div>
 
-        <h3 class="section-title">Tổng quan hệ thống</h3>
-
+        <!-- STATISTICS -->
         <section class="stats-grid">
+
             <div class="stat-card">
-                <div class="stat-icon">🍽</div>
+                <div class="stat-card-top">
+                    <div class="stat-icon">◈</div>
+                    <span class="stat-label">MENU</span>
+                </div>
                 <p>Tổng số món ăn</p>
                 <h2>0</h2>
-                <small>Trong thực đơn</small>
+                <small>Số món trong thực đơn</small>
             </div>
 
             <div class="stat-card">
-                <div class="stat-icon">▤</div>
-                <p>Danh mục</p>
+                <div class="stat-card-top">
+                    <div class="stat-icon">▦</div>
+                    <span class="stat-label">CATEGORY</span>
+                </div>
+                <p>Tổng danh mục</p>
                 <h2>0</h2>
-                <small>Nhóm món ăn</small>
+                <small>Các nhóm món ăn</small>
             </div>
 
             <div class="stat-card">
-                <div class="stat-icon">✓</div>
+                <div class="stat-card-top">
+                    <div class="stat-icon">✓</div>
+                    <span class="stat-label">ACTIVE</span>
+                </div>
                 <p>Đang phục vụ</p>
                 <h2>0</h2>
                 <small>Món đang kinh doanh</small>
             </div>
 
             <div class="stat-card">
-                <div class="stat-icon">×</div>
+                <div class="stat-card-top">
+                    <div class="stat-icon">−</div>
+                    <span class="stat-label">INACTIVE</span>
+                </div>
                 <p>Ngừng phục vụ</p>
                 <h2>0</h2>
-                <small>Món tạm ngừng</small>
+                <small>Món tạm ngừng kinh doanh</small>
+            </div>
+
+        </section>
+
+        <!-- QUICK ACTIONS -->
+        <section class="content-card dashboard-actions">
+            <div class="card-heading">
+                <div>
+                    <span class="section-eyebrow">QUICK ACCESS</span>
+                    <h3>Truy cập nhanh</h3>
+                    <p>Lựa chọn chức năng bạn muốn sử dụng.</p>
+                </div>
+            </div>
+
+            <div class="quick-action-grid">
+
+                <a href="/foods" class="quick-action-item">
+                    <div class="quick-action-icon">◈</div>
+                    <div>
+                        <h4>Quản lý món ăn</h4>
+                        <p>Xem, thêm và cập nhật món ăn.</p>
+                    </div>
+                    <span class="quick-action-arrow">→</span>
+                </a>
+
+                <a href="/categories" class="quick-action-item">
+                    <div class="quick-action-icon">▦</div>
+                    <div>
+                        <h4>Quản lý danh mục</h4>
+                        <p>Sắp xếp các nhóm món ăn.</p>
+                    </div>
+                    <span class="quick-action-arrow">→</span>
+                </a>
+
+                <a href="/foods/add" class="quick-action-item">
+                    <div class="quick-action-icon">＋</div>
+                    <div>
+                        <h4>Thêm món mới</h4>
+                        <p>Bổ sung món ăn vào thực đơn.</p>
+                    </div>
+                    <span class="quick-action-arrow">→</span>
+                </a>
+
             </div>
         </section>
 
-        <section class="content-card">
-            <div class="card-heading">
-                <div>
-                    <h3>Chào mừng đến với RestoMenu</h3>
-                    <p>Bắt đầu quản lý thực đơn nhà hàng của bạn.</p>
-                </div>
-                <a href="/foods" class="primary-btn">Quản lý món ăn →</a>
-            </div>
-        </section>
+        <!-- FOOTER -->
+        <footer class="page-footer">
+            RESTOMENU <span>•</span> JAPANESE RESTAURANT MANAGEMENT
+        </footer>
 
     </main>
 </div>
