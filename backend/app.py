@@ -1,27 +1,21 @@
 
 from flask import Flask, jsonify, request, g, render_template
 from flask_cors import CORS
-from werkzeug.security import check_password_hash, generate_password_hash
+from werkzeug.security import check_password_hash
 from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
 from functools import wraps
-
-import os
-import sys
 from pathlib import Path
+import os
+
 from dotenv import load_dotenv
 
-# Xác định đường dẫn dự án
+# =====================================================
+# 1. KHOI TAO FLASK VA DATABASE
+# =====================================================
+
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-BACKEND_DIR = PROJECT_ROOT / "backend"
+load_dotenv(PROJECT_ROOT / "backend" / ".env", override=True)
 
-if str(PROJECT_ROOT) not in sys.path:
-    sys.path.insert(0, str(PROJECT_ROOT))
-
-# Đọc file .env
-ENV_FILE = BACKEND_DIR / ".env"
-load_dotenv(dotenv_path=ENV_FILE, override=True)
-
-# Kết nối database
 from database.db import (
     get_connection,
     dong_ket_noi,
@@ -29,7 +23,6 @@ from database.db import (
     convert_one_to_json
 )
 
-# Khởi tạo Flask
 app = Flask(
     __name__,
     template_folder=str(PROJECT_ROOT / "frontend" / "templates"),
@@ -38,63 +31,75 @@ app = Flask(
 
 CORS(app, allow_headers=["Content-Type", "Authorization"])
 
-# Cấu hình bảo mật
 SECRET_KEY = os.getenv("SECRET_KEY")
-
 if not SECRET_KEY:
-    raise RuntimeError("Chưa cấu hình SECRET_KEY trong file backend/.env")
+    raise RuntimeError("Chua cau hinh SECRET_KEY trong backend/.env")
 
 serializer = URLSafeTimedSerializer(SECRET_KEY)
 
-# =====================================================
-# 1. KHỞI TẠO FLASK VÀ CẤU HÌNH
-# =====================================================
-
-load_dotenv(override=True)
-
-# Xác định thư mục gốc của dự án QLTDNH
-PROJECT_ROOT = os.path.dirname(
-    os.path.dirname(os.path.abspath(__file__))
-)
-
-# Khởi tạo Flask và kết nối thư mục giao diện
-app = Flask(
-    __name__,
-    template_folder=os.path.join(
-        PROJECT_ROOT, "frontend", "templates"
-    ),
-    static_folder=os.path.join(
-        PROJECT_ROOT, "frontend", "static"
-    )
-)
-
-CORS(
-    app,
-    allow_headers=["Content-Type", "Authorization"]
-)
-SECRET_KEY = os.getenv("SECRET_KEY")
-
-if not SECRET_KEY:
-    raise RuntimeError(
-        "Chưa cấu hình SECRET_KEY trong file .env"
-    )
-
-
-
 
 # =====================================================
-# 2. HÀM LẤY DỮ LIỆU JSON
+# 2. CAC HAM DUNG CHUNG
 # =====================================================
 
 def lay_du_lieu_json():
     return request.get_json(silent=True) or {}
 
 
+def phan_hoi_thanh_cong(message="Thanh cong", data=None, status_code=200, **extra):
+    ket_qua = {
+        "status": "success",
+        "success": True,
+        "message": message
+    }
+
+    if data is not None:
+        ket_qua["data"] = data
+
+    ket_qua.update(extra)
+    return jsonify(ket_qua), status_code
+
+
+def phan_hoi_loi(message, status_code=400):
+    return jsonify({
+        "status": "error",
+        "success": False,
+        "message": message
+    }), status_code
+
+
+def dong_ket_noi_an_toan(cursor, connection):
+    try:
+        dong_ket_noi(cursor, connection)
+    except Exception as error:
+        print("Loi dong ket noi:", error)
+
+
+# Kiem tra mat khau
+def kiem_tra_mat_khau(mat_khau_luu, mat_khau_nhap):
+    if not mat_khau_luu:
+        return False
+
+    mat_khau_luu = str(mat_khau_luu)
+
+    # Tai khoan cu da ma hoa
+    if mat_khau_luu.startswith(("scrypt:", "pbkdf2:")):
+        try:
+            return check_password_hash(
+                mat_khau_luu, mat_khau_nhap
+            )
+        except Exception:
+            return False
+
+    # Tai khoan moi luu mat khau truc tiep
+    return mat_khau_luu == str(mat_khau_nhap)
+
+
 # =====================================================
-# 3. GHI NHẬT KÝ HOẠT ĐỘNG
+# 3. NHAT KY HOAT DONG
 # =====================================================
 
-def ghi_nhat_ky(ma_nguoi_dung, hanh_dong, chi_tiet=None):
+def ghi_nhat_ky(ma_nguoi_dung, hanh_dong, noi_dung=None):
     connection = None
     cursor = None
 
@@ -103,26 +108,26 @@ def ghi_nhat_ky(ma_nguoi_dung, hanh_dong, chi_tiet=None):
         cursor = connection.cursor()
 
         cursor.execute("""
-            INSERT INTO dbo.NhatKyHoatDong
-                (MaNguoiDung, HanhDong, ChiTiet, NgayTao)
-            VALUES (?, ?, ?, GETDATE())
-        """, (
-            ma_nguoi_dung,
-            hanh_dong,
-            chi_tiet
-        ))
+            INSERT INTO dbo.ACTIVITY_LOGS
+                (MaNguoiDung, HanhDong, BangTacDong,
+                 MaBanGhi, NoiDung, ThoiGian)
+            VALUES (?, ?, NULL, NULL, ?, GETDATE())
+        """, (ma_nguoi_dung, hanh_dong, noi_dung))
 
         connection.commit()
 
     except Exception as error:
-        print("Lỗi ghi nhật ký:", error)
+        print("Loi ghi nhat ky:", error)
+
+        if connection:
+            connection.rollback()
 
     finally:
-        dong_ket_noi(connection, cursor)
+        dong_ket_noi_an_toan(cursor, connection)
 
 
 # =====================================================
-# 4. TẠO VÀ KIỂM TRA TOKEN
+# 4. TOKEN VA PHAN QUYEN
 # =====================================================
 
 def tao_token(ma_nguoi_dung):
@@ -147,10 +152,6 @@ def lay_ma_nguoi_dung_tu_token():
         return None
 
 
-# =====================================================
-# 5. XÁC THỰC NGƯỜI DÙNG
-# =====================================================
-
 def xac_thuc_nguoi_dung():
     ma_nguoi_dung = lay_ma_nguoi_dung_tu_token()
 
@@ -165,31 +166,22 @@ def xac_thuc_nguoi_dung():
         cursor = connection.cursor()
 
         cursor.execute("""
-            SELECT
-                MaNguoiDung,
-                TenDangNhap,
-                HoTen,
-                Email,
-                VaiTro,
-                TrangThai
-            FROM dbo.NguoiDung
+            SELECT MaNguoiDung, TenDangNhap, HoTen,
+                   VaiTro, TrangThai
+            FROM dbo.NGUOI_DUNG
             WHERE MaNguoiDung = ?
         """, (ma_nguoi_dung,))
 
         user = convert_one_to_json(cursor)
 
-        if not user or user["TrangThai"] != 1:
+        if not user or not user["TrangThai"]:
             return None
 
         return user
 
     finally:
-        dong_ket_noi(connection, cursor)
+        dong_ket_noi_an_toan(cursor, connection)
 
-
-# =====================================================
-# 6. PHÂN QUYỀN
-# =====================================================
 
 def yeu_cau_dang_nhap(func):
     @wraps(func)
@@ -198,10 +190,9 @@ def yeu_cau_dang_nhap(func):
             user = xac_thuc_nguoi_dung()
 
             if not user:
-                return jsonify({
-                    "status": "error",
-                    "message": "Token không hợp lệ hoặc đã hết hạn"
-                }), 401
+                return phan_hoi_loi(
+                    "Token khong hop le hoac da het han", 401
+                )
 
             g.nguoi_dung = user
             g.ma_nguoi_dung = user["MaNguoiDung"]
@@ -209,12 +200,10 @@ def yeu_cau_dang_nhap(func):
             return func(*args, **kwargs)
 
         except Exception as error:
-            print("Lỗi xác thực:", error)
-
-            return jsonify({
-                "status": "error",
-                "message": "Không thể xác thực người dùng"
-            }), 500
+            print("Loi xac thuc:", error)
+            return phan_hoi_loi(
+                "Khong the xac thuc nguoi dung", 500
+            )
 
     return wrapper
 
@@ -224,11 +213,21 @@ def yeu_cau_quyen(*cac_quyen):
         @wraps(func)
         @yeu_cau_dang_nhap
         def wrapper(*args, **kwargs):
-            if g.nguoi_dung["VaiTro"] not in cac_quyen:
-                return jsonify({
-                    "status": "error",
-                    "message": "Bạn không có quyền thực hiện chức năng này"
-                }), 403
+
+            vai_tro = str(
+                g.nguoi_dung["VaiTro"]
+            ).strip().lower()
+
+            danh_sach_quyen = [
+                str(quyen).strip().lower()
+                for quyen in cac_quyen
+            ]
+
+            if vai_tro not in danh_sach_quyen:
+                return phan_hoi_loi(
+                    "Ban khong co quyen thuc hien chuc nang nay",
+                    403
+                )
 
             return func(*args, **kwargs)
 
@@ -238,7 +237,7 @@ def yeu_cau_quyen(*cac_quyen):
 
 
 # =====================================================
-# 7. TỰ ĐỘNG GHI NHẬT KÝ SAU CÁC THAO TÁC
+# 5. TU DONG GHI NHAT KY
 # =====================================================
 
 @app.after_request
@@ -250,32 +249,24 @@ def ghi_nhat_ky_sau_thao_tac(response):
         endpoint = request.endpoint
 
         danh_sach_hanh_dong = {
-            "them_mon_an": "Thêm món ăn",
-            "sua_mon_an": "Cập nhật món ăn",
-            "xoa_mon_an": "Xóa món ăn",
-
-            "them_danh_muc": "Thêm danh mục",
-            "sua_danh_muc": "Cập nhật danh mục",
-            "xoa_danh_muc": "Xóa danh mục",
-
-            "them_nguoi_dung": "Thêm người dùng",
-            "sua_nguoi_dung": "Cập nhật người dùng",
-            "xoa_nguoi_dung": "Khóa người dùng",
-            "mo_khoa_nguoi_dung": "Mở khóa người dùng"
+            "dang_ky": "Dang ky tai khoan",
+            "them_mon_an": "Them mon an",
+            "sua_mon_an": "Cap nhat mon an",
+            "xoa_mon_an": "Ngung kinh doanh mon an",
+            "them_danh_muc": "Them danh muc",
+            "sua_danh_muc": "Cap nhat danh muc",
+            "xoa_danh_muc": "Khoa danh muc",
+            "them_nguoi_dung": "Them nguoi dung",
+            "sua_nguoi_dung": "Cap nhat nguoi dung",
+            "xoa_nguoi_dung": "Khoa nguoi dung",
+            "mo_khoa_nguoi_dung": "Mo khoa nguoi dung"
         }
 
         if endpoint in danh_sach_hanh_dong:
-            ma_nguoi_dung = getattr(
-                g,
-                "ma_nguoi_dung",
-                None
-            )
-
             ghi_nhat_ky(
-                ma_nguoi_dung,
+                getattr(g, "ma_nguoi_dung", None),
                 danh_sach_hanh_dong[endpoint],
-                f"Đường dẫn: {request.path}; "
-                f"Phương thức: {request.method}"
+                f"{request.method} {request.path}"
             )
 
         if endpoint == "dang_nhap":
@@ -286,52 +277,65 @@ def ghi_nhat_ky_sau_thao_tac(response):
 
                 ghi_nhat_ky(
                     user.get("MaNguoiDung"),
-                    "Đăng nhập",
-                    "Đăng nhập hệ thống thành công"
+                    "Dang nhap",
+                    "Dang nhap he thong thanh cong"
                 )
 
     except Exception as error:
-        print("Lỗi ghi nhật ký tự động:", error)
+        print("Loi ghi nhat ky tu dong:", error)
 
     return response
 
 
 # =====================================================
-# 8. TRANG CHỦ VÀ KIỂM TRA KẾT NỐI
+# 6. TRANG WEB
 # =====================================================
 
-# =====================================================
-# 9. CÁC ROUTE HIỂN THỊ GIAO DIỆN
-# =====================================================
+def hien_thi_trang(ten_file, **context):
+    duong_dan = PROJECT_ROOT / "frontend" / "templates" / ten_file
+
+    if duong_dan.exists():
+        return render_template(ten_file, **context)
+
+    return jsonify({
+        "status": "success",
+        "message": "Backend dang hoat dong. Khong tim thay template: " + ten_file
+    })
+
 
 @app.route("/")
 def trang_chu():
     return render_template("dashboard.html")
 
 
-@app.route("/login")
+@app.route("/login", methods=["GET"])
 def trang_dang_nhap():
-    return render_template("login.html")
+    return hien_thi_trang("login.html")
 
 
-@app.route("/foods")
+@app.route("/foods", methods=["GET"])
 def trang_mon_an():
-    return render_template("foods.html")
+    return hien_thi_trang("foods.html")
 
 
-@app.route("/foods/add")
+@app.route("/foods/add", methods=["GET"])
 def trang_them_mon_an():
-    return render_template("add_food.html")
+    return hien_thi_trang("food_form.html")
 
 
-@app.route("/foods/edit/<int:food_id>")
-def trang_sua_mon_an(food_id):
-    return render_template("edit_food.html", food_id=food_id)
+@app.route("/foods/edit/<int:ma_mon_an>", methods=["GET"])
+def trang_sua_mon_an(ma_mon_an):
+    return hien_thi_trang("food_form.html", ma_mon_an=ma_mon_an)
 
 
-@app.route("/categories")
+@app.route("/categories", methods=["GET"])
 def trang_danh_muc():
-    return render_template("categories.html")
+    return hien_thi_trang("categories.html")
+
+
+# =====================================================
+# 7. KIEM TRA BACKEND VA SQL SERVER
+# =====================================================
 
 @app.route("/api/health", methods=["GET"])
 def health():
@@ -343,27 +347,22 @@ def health():
         cursor = connection.cursor()
 
         cursor.execute("SELECT DB_NAME()")
-
         database = cursor.fetchone()[0]
 
-        return jsonify({
-            "status": "success",
-            "database": database,
-            "message": "Backend đã kết nối SQL Server thành công"
-        })
+        return phan_hoi_thanh_cong(
+            "Backend da ket noi SQL Server thanh cong",
+            database=database
+        )
 
     except Exception as error:
-        return jsonify({
-            "status": "error",
-            "message": str(error)
-        }), 500
+        return phan_hoi_loi(str(error), 500)
 
     finally:
-        dong_ket_noi(connection, cursor)
+        dong_ket_noi_an_toan(cursor, connection)
 
 
 # =====================================================
-# 9. API ĐĂNG NHẬP
+# 8. API DANG NHAP
 # =====================================================
 
 @app.route("/api/dang-nhap", methods=["POST"])
@@ -374,10 +373,9 @@ def dang_nhap():
     mat_khau = data.get("MatKhau")
 
     if not ten_dang_nhap or not mat_khau:
-        return jsonify({
-            "status": "error",
-            "message": "Vui lòng nhập tên đăng nhập và mật khẩu"
-        }), 400
+        return phan_hoi_loi(
+            "Vui long nhap ten dang nhap va mat khau"
+        )
 
     connection = None
     cursor = None
@@ -387,68 +385,134 @@ def dang_nhap():
         cursor = connection.cursor()
 
         cursor.execute("""
-            SELECT
-                MaNguoiDung,
-                TenDangNhap,
-                MatKhau,
-                HoTen,
-                Email,
-                VaiTro,
-                TrangThai
-            FROM dbo.NguoiDung
+            SELECT MaNguoiDung, TenDangNhap, MatKhauHash,
+                   HoTen, VaiTro, TrangThai
+            FROM dbo.NGUOI_DUNG
             WHERE TenDangNhap = ?
         """, (ten_dang_nhap,))
 
         user = convert_one_to_json(cursor)
 
-        if not user:
-            return jsonify({
-                "status": "error",
-                "message": "Tên đăng nhập hoặc mật khẩu không đúng"
-            }), 401
+        if not user or not kiem_tra_mat_khau(
+            user["MatKhauHash"], mat_khau
+        ):
+            return phan_hoi_loi(
+                "Ten dang nhap hoac mat khau khong dung", 401
+            )
 
-        if not check_password_hash(user["MatKhau"], mat_khau):
-            return jsonify({
-                "status": "error",
-                "message": "Tên đăng nhập hoặc mật khẩu không đúng"
-            }), 401
-
-        if user["TrangThai"] != 1:
-            return jsonify({
-                "status": "error",
-                "message": "Tài khoản đã bị khóa"
-            }), 403
+        if not user["TrangThai"]:
+            return phan_hoi_loi(
+                "Tai khoan da bi khoa", 403
+            )
 
         token = tao_token(user["MaNguoiDung"])
 
-        return jsonify({
-            "status": "success",
-            "message": "Đăng nhập thành công",
-            "token": token,
-            "data": {
+        return phan_hoi_thanh_cong(
+            "Dang nhap thanh cong",
+            token=token,
+            data={
                 "MaNguoiDung": user["MaNguoiDung"],
                 "TenDangNhap": user["TenDangNhap"],
                 "HoTen": user["HoTen"],
-                "Email": user["Email"],
                 "VaiTro": user["VaiTro"]
             }
-        })
+        )
 
     except Exception as error:
-        return jsonify({
-            "status": "error",
-            "message": str(error)
-        }), 500
+        return phan_hoi_loi(str(error), 500)
 
     finally:
-        dong_ket_noi(connection, cursor)
+        dong_ket_noi_an_toan(cursor, connection)
 
 
 # =====================================================
-# 10. API QUẢN LÝ MÓN ĂN
+# 9. API DANG KY TAI KHOAN
 # =====================================================
 
-# Lấy danh sách món ăn
+@app.route("/api/dang-ky", methods=["POST"])
+def dang_ky():
+    data = lay_du_lieu_json()
+
+    ten_dang_nhap = str(
+        data.get("TenDangNhap", "")
+    ).strip()
+
+    mat_khau = str(data.get("MatKhau", ""))
+
+    ho_ten = str(
+        data.get("HoTen", "")
+    ).strip()
+
+    if not ten_dang_nhap or not mat_khau or not ho_ten:
+        return phan_hoi_loi(
+            "Vui long nhap ten dang nhap, mat khau va ho ten"
+        )
+
+    if len(ten_dang_nhap) < 3:
+        return phan_hoi_loi(
+            "Ten dang nhap phai co it nhat 3 ky tu"
+        )
+
+    if len(mat_khau) < 6:
+        return phan_hoi_loi(
+            "Mat khau phai co it nhat 6 ky tu"
+        )
+
+    connection = None
+    cursor = None
+
+    try:
+        connection = get_connection()
+        cursor = connection.cursor()
+
+        cursor.execute("""
+            SELECT COUNT(*)
+            FROM dbo.NGUOI_DUNG
+            WHERE TenDangNhap = ?
+        """, (ten_dang_nhap,))
+
+        if cursor.fetchone()[0] > 0:
+            return phan_hoi_loi(
+                "Ten dang nhap da ton tai"
+            )
+
+        # Luu mat khau truc tiep, khong ma hoa
+        cursor.execute("""
+            INSERT INTO dbo.NGUOI_DUNG
+                (TenDangNhap, MatKhauHash, HoTen,
+                 VaiTro, TrangThai, NgayTao)
+            VALUES (?, ?, ?, 'user', 1, GETDATE())
+        """, (
+            ten_dang_nhap,
+            mat_khau,
+            ho_ten
+        ))
+
+        connection.commit()
+
+        return phan_hoi_thanh_cong(
+            "Dang ky tai khoan thanh cong",
+            status_code=201
+        )
+
+    except Exception as error:
+        if connection:
+            connection.rollback()
+
+        print("Loi dang ky:", error)
+
+        return phan_hoi_loi(
+            "Khong the dang ky tai khoan", 500
+        )
+
+    finally:
+        dong_ket_noi_an_toan(cursor, connection)
+
+
+# =====================================================
+# 10. API MON AN
+# =====================================================
+
 @app.route("/api/mon-an", methods=["GET"])
 def danh_sach_mon_an():
     connection = None
@@ -459,8 +523,13 @@ def danh_sach_mon_an():
         cursor = connection.cursor()
 
         sql = """
-            SELECT *
-            FROM dbo.vw_ChiTietMonAn
+            SELECT MA.MaMonAn, MA.MaMon, MA.TenMonAn,
+                   MA.MaDanhMuc, DM.TenDanhMuc, MA.Gia,
+                   MA.MoTa, MA.HinhAnh, MA.ConKinhDoanh,
+                   MA.NgayTao, MA.NgayCapNhat
+            FROM dbo.MON_AN MA
+            LEFT JOIN dbo.DANH_MUC DM
+                ON DM.MaDanhMuc = MA.MaDanhMuc
             WHERE 1 = 1
         """
 
@@ -472,10 +541,7 @@ def danh_sach_mon_an():
 
         if tu_khoa:
             sql += """
-                AND (
-                    TenMonAn LIKE ?
-                    OR MaMon LIKE ?
-                )
+                AND (MA.TenMonAn LIKE ? OR MA.MaMon LIKE ?)
             """
             params.extend([
                 f"%{tu_khoa}%",
@@ -483,38 +549,32 @@ def danh_sach_mon_an():
             ])
 
         if ma_danh_muc:
-            sql += " AND MaDanhMuc = ?"
+            sql += " AND MA.MaDanhMuc = ?"
             params.append(ma_danh_muc)
 
         if con_kinh_doanh is not None:
-            gia_tri = (
-                1 if con_kinh_doanh.lower() == "true"
-                else 0
-            )
+            gia_tri = 1 if con_kinh_doanh.lower() in (
+                "true", "1", "yes"
+            ) else 0
 
-            sql += " AND ConKinhDoanh = ?"
+            sql += " AND MA.ConKinhDoanh = ?"
             params.append(gia_tri)
 
-        sql += " ORDER BY MaMonAn DESC"
+        sql += " ORDER BY MA.MaMonAn DESC"
 
         cursor.execute(sql, params)
 
-        return jsonify({
-            "status": "success",
-            "data": convert_to_json(cursor)
-        })
+        return phan_hoi_thanh_cong(
+            data=convert_to_json(cursor)
+        )
 
     except Exception as error:
-        return jsonify({
-            "status": "error",
-            "message": str(error)
-        }), 500
+        return phan_hoi_loi(str(error), 500)
 
     finally:
-        dong_ket_noi(connection, cursor)
+        dong_ket_noi_an_toan(cursor, connection)
 
 
-# Thêm món ăn
 @app.route("/api/mon-an", methods=["POST"])
 @yeu_cau_quyen("Admin", "Manager")
 def them_mon_an():
@@ -525,28 +585,19 @@ def them_mon_an():
     ma_danh_muc = data.get("MaDanhMuc")
     gia = data.get("Gia")
 
-    if (
-        not ma_mon
-        or not ten_mon
-        or not ma_danh_muc
-        or gia is None
-    ):
-        return jsonify({
-            "status": "error",
-            "message": "Vui lòng nhập đầy đủ thông tin món ăn"
-        }), 400
+    if not ma_mon or not ten_mon or not ma_danh_muc or gia is None:
+        return phan_hoi_loi(
+            "Vui long nhap day du thong tin mon an"
+        )
 
     try:
         gia = float(gia)
 
         if gia < 0:
-            raise ValueError()
+            raise ValueError
 
     except (ValueError, TypeError):
-        return jsonify({
-            "status": "error",
-            "message": "Giá món ăn không hợp lệ"
-        }), 400
+        return phan_hoi_loi("Gia mon an khong hop le")
 
     connection = None
     cursor = None
@@ -556,42 +607,26 @@ def them_mon_an():
         cursor = connection.cursor()
 
         cursor.execute("""
-            SELECT COUNT(*)
-            FROM dbo.MonAn
-            WHERE MaMon = ?
+            SELECT COUNT(*) FROM dbo.MON_AN WHERE MaMon = ?
         """, (ma_mon,))
 
         if cursor.fetchone()[0] > 0:
-            return jsonify({
-                "status": "error",
-                "message": "Mã món ăn đã tồn tại"
-            }), 400
+            return phan_hoi_loi("Ma mon an da ton tai")
 
         cursor.execute("""
-            SELECT COUNT(*)
-            FROM dbo.DanhMuc
-            WHERE MaDanhMuc = ?
-              AND TrangThai = 1
+            SELECT COUNT(*) FROM dbo.DANH_MUC
+            WHERE MaDanhMuc = ? AND TrangThai = 1
         """, (ma_danh_muc,))
 
         if cursor.fetchone()[0] == 0:
-            return jsonify({
-                "status": "error",
-                "message": "Danh mục không tồn tại hoặc đã bị khóa"
-            }), 400
+            return phan_hoi_loi(
+                "Danh muc khong ton tai hoac da bi khoa"
+            )
 
         cursor.execute("""
-            INSERT INTO dbo.MonAn
-                (
-                    MaMon,
-                    TenMonAn,
-                    MaDanhMuc,
-                    MoTa,
-                    Gia,
-                    HinhAnh,
-                    ConKinhDoanh,
-                    NgayTao
-                )
+            INSERT INTO dbo.MON_AN
+                (MaMon, TenMonAn, MaDanhMuc, MoTa, Gia,
+                 HinhAnh, ConKinhDoanh, NgayTao)
             VALUES (?, ?, ?, ?, ?, ?, 1, GETDATE())
         """, (
             ma_mon,
@@ -604,25 +639,20 @@ def them_mon_an():
 
         connection.commit()
 
-        return jsonify({
-            "status": "success",
-            "message": "Thêm món ăn thành công"
-        }), 201
+        return phan_hoi_thanh_cong(
+            "Them mon an thanh cong", status_code=201
+        )
 
     except Exception as error:
         if connection:
             connection.rollback()
 
-        return jsonify({
-            "status": "error",
-            "message": str(error)
-        }), 500
+        return phan_hoi_loi(str(error), 500)
 
     finally:
-        dong_ket_noi(connection, cursor)
+        dong_ket_noi_an_toan(cursor, connection)
 
 
-# Sửa món ăn
 @app.route("/api/mon-an/<int:ma_mon_an>", methods=["PUT"])
 @yeu_cau_quyen("Admin", "Manager")
 def sua_mon_an(ma_mon_an):
@@ -633,22 +663,18 @@ def sua_mon_an(ma_mon_an):
     gia = data.get("Gia")
 
     if not ten_mon or not ma_danh_muc or gia is None:
-        return jsonify({
-            "status": "error",
-            "message": "Vui lòng nhập đầy đủ thông tin món ăn"
-        }), 400
+        return phan_hoi_loi(
+            "Vui long nhap day du thong tin mon an"
+        )
 
     try:
         gia = float(gia)
 
         if gia < 0:
-            raise ValueError()
+            raise ValueError
 
     except (ValueError, TypeError):
-        return jsonify({
-            "status": "error",
-            "message": "Giá món ăn không hợp lệ"
-        }), 400
+        return phan_hoi_loi("Gia mon an khong hop le")
 
     connection = None
     cursor = None
@@ -658,27 +684,19 @@ def sua_mon_an(ma_mon_an):
         cursor = connection.cursor()
 
         cursor.execute("""
-            SELECT COUNT(*)
-            FROM dbo.DanhMuc
-            WHERE MaDanhMuc = ?
-              AND TrangThai = 1
+            SELECT COUNT(*) FROM dbo.DANH_MUC
+            WHERE MaDanhMuc = ? AND TrangThai = 1
         """, (ma_danh_muc,))
 
         if cursor.fetchone()[0] == 0:
-            return jsonify({
-                "status": "error",
-                "message": "Danh mục không tồn tại hoặc đã bị khóa"
-            }), 400
+            return phan_hoi_loi(
+                "Danh muc khong ton tai hoac da bi khoa"
+            )
 
         cursor.execute("""
-            UPDATE dbo.MonAn
-            SET
-                TenMonAn = ?,
-                MaDanhMuc = ?,
-                MoTa = ?,
-                Gia = ?,
-                HinhAnh = ?,
-                NgayCapNhat = GETDATE()
+            UPDATE dbo.MON_AN
+            SET TenMonAn = ?, MaDanhMuc = ?, MoTa = ?,
+                Gia = ?, HinhAnh = ?, NgayCapNhat = GETDATE()
             WHERE MaMonAn = ?
         """, (
             ten_mon,
@@ -690,32 +708,24 @@ def sua_mon_an(ma_mon_an):
         ))
 
         if cursor.rowcount == 0:
-            return jsonify({
-                "status": "error",
-                "message": "Không tìm thấy món ăn"
-            }), 404
+            return phan_hoi_loi("Khong tim thay mon an", 404)
 
         connection.commit()
 
-        return jsonify({
-            "status": "success",
-            "message": "Cập nhật món ăn thành công"
-        })
+        return phan_hoi_thanh_cong(
+            "Cap nhat mon an thanh cong"
+        )
 
     except Exception as error:
         if connection:
             connection.rollback()
 
-        return jsonify({
-            "status": "error",
-            "message": str(error)
-        }), 500
+        return phan_hoi_loi(str(error), 500)
 
     finally:
-        dong_ket_noi(connection, cursor)
+        dong_ket_noi_an_toan(cursor, connection)
 
 
-# Xóa mềm món ăn
 @app.route("/api/mon-an/<int:ma_mon_an>", methods=["DELETE"])
 @yeu_cau_quyen("Admin", "Manager")
 def xoa_mon_an(ma_mon_an):
@@ -727,45 +737,36 @@ def xoa_mon_an(ma_mon_an):
         cursor = connection.cursor()
 
         cursor.execute("""
-            UPDATE dbo.MonAn
-            SET
-                ConKinhDoanh = 0,
-                NgayCapNhat = GETDATE()
-            WHERE MaMonAn = ?
-              AND ConKinhDoanh = 1
+            UPDATE dbo.MON_AN
+            SET ConKinhDoanh = 0, NgayCapNhat = GETDATE()
+            WHERE MaMonAn = ? AND ConKinhDoanh = 1
         """, (ma_mon_an,))
 
         if cursor.rowcount == 0:
-            return jsonify({
-                "status": "error",
-                "message": "Không tìm thấy món ăn đang kinh doanh"
-            }), 404
+            return phan_hoi_loi(
+                "Khong tim thay mon an dang kinh doanh", 404
+            )
 
         connection.commit()
 
-        return jsonify({
-            "status": "success",
-            "message": "Đã ngừng kinh doanh món ăn"
-        })
+        return phan_hoi_thanh_cong(
+            "Da ngung kinh doanh mon an"
+        )
 
     except Exception as error:
         if connection:
             connection.rollback()
 
-        return jsonify({
-            "status": "error",
-            "message": str(error)
-        }), 500
+        return phan_hoi_loi(str(error), 500)
 
     finally:
-        dong_ket_noi(connection, cursor)
+        dong_ket_noi_an_toan(cursor, connection)
 
 
 # =====================================================
-# 11. API QUẢN LÝ DANH MỤC
+# 11. API DANH MUC
 # =====================================================
 
-# Lấy danh sách danh mục
 @app.route("/api/danh-muc", methods=["GET"])
 def danh_sach_danh_muc():
     connection = None
@@ -776,8 +777,9 @@ def danh_sach_danh_muc():
         cursor = connection.cursor()
 
         sql = """
-            SELECT *
-            FROM dbo.DanhMuc
+            SELECT MaDanhMuc, TenDanhMuc, MoTa,
+                   ThuTuHienThi, TrangThai
+            FROM dbo.DANH_MUC
             WHERE 1 = 1
         """
 
@@ -791,10 +793,9 @@ def danh_sach_danh_muc():
             params.append(f"%{tu_khoa}%")
 
         if trang_thai is not None:
-            gia_tri = (
-                1 if trang_thai.lower() == "true"
-                else 0
-            )
+            gia_tri = 1 if trang_thai.lower() in (
+                "true", "1", "yes"
+            ) else 0
 
             sql += " AND TrangThai = ?"
             params.append(gia_tri)
@@ -803,35 +804,26 @@ def danh_sach_danh_muc():
 
         cursor.execute(sql, params)
 
-        return jsonify({
-            "status": "success",
-            "data": convert_to_json(cursor)
-        })
+        return phan_hoi_thanh_cong(
+            data=convert_to_json(cursor)
+        )
 
     except Exception as error:
-        return jsonify({
-            "status": "error",
-            "message": str(error)
-        }), 500
+        return phan_hoi_loi(str(error), 500)
 
     finally:
-        dong_ket_noi(connection, cursor)
+        dong_ket_noi_an_toan(cursor, connection)
 
 
-# Thêm danh mục
 @app.route("/api/danh-muc", methods=["POST"])
 @yeu_cau_quyen("Admin", "Manager")
 def them_danh_muc():
     data = lay_du_lieu_json()
 
-    ky_hieu = data.get("KyHieuDanhMuc")
     ten_danh_muc = data.get("TenDanhMuc")
 
-    if not ky_hieu or not ten_danh_muc:
-        return jsonify({
-            "status": "error",
-            "message": "Vui lòng nhập mã và tên danh mục"
-        }), 400
+    if not ten_danh_muc:
+        return phan_hoi_loi("Vui long nhap ten danh muc")
 
     connection = None
     cursor = None
@@ -841,54 +833,49 @@ def them_danh_muc():
         cursor = connection.cursor()
 
         cursor.execute("""
-            SELECT COUNT(*)
-            FROM dbo.DanhMuc
-            WHERE KyHieuDanhMuc = ?
-        """, (ky_hieu,))
+            SELECT COUNT(*) FROM dbo.DANH_MUC
+            WHERE TenDanhMuc = ?
+        """, (ten_danh_muc,))
 
         if cursor.fetchone()[0] > 0:
-            return jsonify({
-                "status": "error",
-                "message": "Mã danh mục đã tồn tại"
-            }), 400
+            return phan_hoi_loi("Ten danh muc da ton tai")
+
+        thu_tu = data.get("ThuTuHienThi")
+
+        if thu_tu is None:
+            cursor.execute("""
+                SELECT ISNULL(MAX(ThuTuHienThi), 0) + 1
+                FROM dbo.DANH_MUC
+            """)
+
+            thu_tu = cursor.fetchone()[0]
 
         cursor.execute("""
-            INSERT INTO dbo.DanhMuc
-                (
-                    KyHieuDanhMuc,
-                    TenDanhMuc,
-                    MoTa,
-                    TrangThai,
-                    NgayTao
-                )
-            VALUES (?, ?, ?, 1, GETDATE())
+            INSERT INTO dbo.DANH_MUC
+                (TenDanhMuc, MoTa, ThuTuHienThi, TrangThai)
+            VALUES (?, ?, ?, 1)
         """, (
-            ky_hieu,
             ten_danh_muc,
-            data.get("MoTa")
+            data.get("MoTa"),
+            thu_tu
         ))
 
         connection.commit()
 
-        return jsonify({
-            "status": "success",
-            "message": "Thêm danh mục thành công"
-        }), 201
+        return phan_hoi_thanh_cong(
+            "Them danh muc thanh cong", status_code=201
+        )
 
     except Exception as error:
         if connection:
             connection.rollback()
 
-        return jsonify({
-            "status": "error",
-            "message": str(error)
-        }), 500
+        return phan_hoi_loi(str(error), 500)
 
     finally:
-        dong_ket_noi(connection, cursor)
+        dong_ket_noi_an_toan(cursor, connection)
 
 
-# Sửa danh mục
 @app.route("/api/danh-muc/<int:ma_danh_muc>", methods=["PUT"])
 @yeu_cau_quyen("Admin", "Manager")
 def sua_danh_muc(ma_danh_muc):
@@ -897,10 +884,7 @@ def sua_danh_muc(ma_danh_muc):
     ten_danh_muc = data.get("TenDanhMuc")
 
     if not ten_danh_muc:
-        return jsonify({
-            "status": "error",
-            "message": "Vui lòng nhập tên danh mục"
-        }), 400
+        return phan_hoi_loi("Vui long nhap ten danh muc")
 
     connection = None
     cursor = None
@@ -909,46 +893,48 @@ def sua_danh_muc(ma_danh_muc):
         connection = get_connection()
         cursor = connection.cursor()
 
-        cursor.execute("""
-            UPDATE dbo.DanhMuc
-            SET
-                TenDanhMuc = ?,
-                MoTa = ?,
-                NgayCapNhat = GETDATE()
-            WHERE MaDanhMuc = ?
-        """, (
-            ten_danh_muc,
-            data.get("MoTa"),
-            ma_danh_muc
-        ))
+        if "ThuTuHienThi" in data:
+            cursor.execute("""
+                UPDATE dbo.DANH_MUC
+                SET TenDanhMuc = ?, MoTa = ?, ThuTuHienThi = ?
+                WHERE MaDanhMuc = ?
+            """, (
+                ten_danh_muc,
+                data.get("MoTa"),
+                data.get("ThuTuHienThi"),
+                ma_danh_muc
+            ))
+
+        else:
+            cursor.execute("""
+                UPDATE dbo.DANH_MUC
+                SET TenDanhMuc = ?, MoTa = ?
+                WHERE MaDanhMuc = ?
+            """, (
+                ten_danh_muc,
+                data.get("MoTa"),
+                ma_danh_muc
+            ))
 
         if cursor.rowcount == 0:
-            return jsonify({
-                "status": "error",
-                "message": "Không tìm thấy danh mục"
-            }), 404
+            return phan_hoi_loi("Khong tim thay danh muc", 404)
 
         connection.commit()
 
-        return jsonify({
-            "status": "success",
-            "message": "Cập nhật danh mục thành công"
-        })
+        return phan_hoi_thanh_cong(
+            "Cap nhat danh muc thanh cong"
+        )
 
     except Exception as error:
         if connection:
             connection.rollback()
 
-        return jsonify({
-            "status": "error",
-            "message": str(error)
-        }), 500
+        return phan_hoi_loi(str(error), 500)
 
     finally:
-        dong_ket_noi(connection, cursor)
+        dong_ket_noi_an_toan(cursor, connection)
 
 
-# Xóa mềm danh mục
 @app.route("/api/danh-muc/<int:ma_danh_muc>", methods=["DELETE"])
 @yeu_cau_quyen("Admin", "Manager")
 def xoa_danh_muc(ma_danh_muc):
@@ -960,58 +946,46 @@ def xoa_danh_muc(ma_danh_muc):
         cursor = connection.cursor()
 
         cursor.execute("""
-            SELECT COUNT(*)
-            FROM dbo.MonAn
-            WHERE MaDanhMuc = ?
-              AND ConKinhDoanh = 1
+            SELECT COUNT(*) FROM dbo.MON_AN
+            WHERE MaDanhMuc = ? AND ConKinhDoanh = 1
         """, (ma_danh_muc,))
 
         if cursor.fetchone()[0] > 0:
-            return jsonify({
-                "status": "error",
-                "message": "Danh mục đang có món ăn kinh doanh, không thể khóa"
-            }), 400
+            return phan_hoi_loi(
+                "Danh muc dang co mon an kinh doanh, khong the khoa"
+            )
 
         cursor.execute("""
-            UPDATE dbo.DanhMuc
-            SET
-                TrangThai = 0,
-                NgayCapNhat = GETDATE()
-            WHERE MaDanhMuc = ?
-              AND TrangThai = 1
+            UPDATE dbo.DANH_MUC
+            SET TrangThai = 0
+            WHERE MaDanhMuc = ? AND TrangThai = 1
         """, (ma_danh_muc,))
 
         if cursor.rowcount == 0:
-            return jsonify({
-                "status": "error",
-                "message": "Không tìm thấy danh mục đang hoạt động"
-            }), 404
+            return phan_hoi_loi(
+                "Khong tim thay danh muc dang hoat dong", 404
+            )
 
         connection.commit()
 
-        return jsonify({
-            "status": "success",
-            "message": "Đã ngừng hoạt động danh mục"
-        })
+        return phan_hoi_thanh_cong(
+            "Da ngung hoat dong danh muc"
+        )
 
     except Exception as error:
         if connection:
             connection.rollback()
 
-        return jsonify({
-            "status": "error",
-            "message": str(error)
-        }), 500
+        return phan_hoi_loi(str(error), 500)
 
     finally:
-        dong_ket_noi(connection, cursor)
+        dong_ket_noi_an_toan(cursor, connection)
 
 
 # =====================================================
-# 12. API QUẢN LÝ NGƯỜI DÙNG
+# 12. API NGUOI DUNG
 # =====================================================
 
-# Lấy danh sách người dùng
 @app.route("/api/nguoi-dung", methods=["GET"])
 @yeu_cau_quyen("Admin")
 def danh_sach_nguoi_dung():
@@ -1023,35 +997,23 @@ def danh_sach_nguoi_dung():
         cursor = connection.cursor()
 
         cursor.execute("""
-            SELECT
-                MaNguoiDung,
-                TenDangNhap,
-                HoTen,
-                Email,
-                VaiTro,
-                TrangThai,
-                NgayTao,
-                NgayCapNhat
-            FROM dbo.NguoiDung
+            SELECT MaNguoiDung, TenDangNhap, HoTen,
+                   VaiTro, TrangThai, NgayTao
+            FROM dbo.NGUOI_DUNG
             ORDER BY MaNguoiDung DESC
         """)
 
-        return jsonify({
-            "status": "success",
-            "data": convert_to_json(cursor)
-        })
+        return phan_hoi_thanh_cong(
+            data=convert_to_json(cursor)
+        )
 
     except Exception as error:
-        return jsonify({
-            "status": "error",
-            "message": str(error)
-        }), 500
+        return phan_hoi_loi(str(error), 500)
 
     finally:
-        dong_ket_noi(connection, cursor)
+        dong_ket_noi_an_toan(cursor, connection)
 
 
-# Thêm người dùng
 @app.route("/api/nguoi-dung", methods=["POST"])
 @yeu_cau_quyen("Admin")
 def them_nguoi_dung():
@@ -1060,26 +1022,20 @@ def them_nguoi_dung():
     ten_dang_nhap = data.get("TenDangNhap")
     mat_khau = data.get("MatKhau")
     ho_ten = data.get("HoTen")
-    email = data.get("Email")
     vai_tro = data.get("VaiTro", "Staff")
 
-    if not all([ten_dang_nhap, mat_khau, ho_ten, email]):
-        return jsonify({
-            "status": "error",
-            "message": "Vui lòng nhập đầy đủ thông tin người dùng"
-        }), 400
+    if not all([ten_dang_nhap, mat_khau, ho_ten]):
+        return phan_hoi_loi(
+            "Vui long nhap ten dang nhap, mat khau va ho ten"
+        )
 
     if len(mat_khau) < 6:
-        return jsonify({
-            "status": "error",
-            "message": "Mật khẩu phải có ít nhất 6 ký tự"
-        }), 400
+        return phan_hoi_loi(
+            "Mat khau phai co it nhat 6 ky tu"
+        )
 
     if vai_tro not in ["Admin", "Manager", "Staff"]:
-        return jsonify({
-            "status": "error",
-            "message": "Vai trò không hợp lệ"
-        }), 400
+        return phan_hoi_loi("Vai tro khong hop le")
 
     connection = None
     cursor = None
@@ -1089,90 +1045,65 @@ def them_nguoi_dung():
         cursor = connection.cursor()
 
         cursor.execute("""
-            SELECT COUNT(*)
-            FROM dbo.NguoiDung
+            SELECT COUNT(*) FROM dbo.NGUOI_DUNG
             WHERE TenDangNhap = ?
-               OR Email = ?
-        """, (
-            ten_dang_nhap,
-            email
-        ))
+        """, (ten_dang_nhap,))
 
         if cursor.fetchone()[0] > 0:
-            return jsonify({
-                "status": "error",
-                "message": "Tên đăng nhập hoặc email đã tồn tại"
-            }), 400
+            return phan_hoi_loi("Ten dang nhap da ton tai")
 
+        # Tai khoan do Admin tao van luu mat khau ma hoa
+        from werkzeug.security import generate_password_hash
         mat_khau_ma_hoa = generate_password_hash(mat_khau)
 
         cursor.execute("""
-            INSERT INTO dbo.NguoiDung
-                (
-                    TenDangNhap,
-                    MatKhau,
-                    HoTen,
-                    Email,
-                    VaiTro,
-                    TrangThai,
-                    NgayTao
-                )
-            VALUES (?, ?, ?, ?, ?, 1, GETDATE())
+            INSERT INTO dbo.NGUOI_DUNG
+                (TenDangNhap, MatKhauHash, HoTen,
+                 VaiTro, TrangThai, NgayTao)
+            VALUES (?, ?, ?, ?, 1, GETDATE())
         """, (
             ten_dang_nhap,
             mat_khau_ma_hoa,
             ho_ten,
-            email,
             vai_tro
         ))
 
         connection.commit()
 
-        return jsonify({
-            "status": "success",
-            "message": "Thêm người dùng thành công"
-        }), 201
+        return phan_hoi_thanh_cong(
+            "Them nguoi dung thanh cong", status_code=201
+        )
 
     except Exception as error:
         if connection:
             connection.rollback()
 
-        return jsonify({
-            "status": "error",
-            "message": str(error)
-        }), 500
+        return phan_hoi_loi(str(error), 500)
 
     finally:
-        dong_ket_noi(connection, cursor)
+        dong_ket_noi_an_toan(cursor, connection)
 
 
-# Sửa người dùng
 @app.route("/api/nguoi-dung/<int:ma_nguoi_dung>", methods=["PUT"])
 @yeu_cau_quyen("Admin")
 def sua_nguoi_dung(ma_nguoi_dung):
+    if ma_nguoi_dung == g.ma_nguoi_dung:
+        return phan_hoi_loi(
+            "Khong the tu chinh sua tai khoan cua minh tai day"
+        )
+
     data = lay_du_lieu_json()
 
-    if ma_nguoi_dung == g.ma_nguoi_dung:
-        return jsonify({
-            "status": "error",
-            "message": "Không thể tự chỉnh sửa tài khoản của mình tại đây"
-        }), 400
-
     ho_ten = data.get("HoTen")
-    email = data.get("Email")
     vai_tro = data.get("VaiTro")
 
-    if not all([ho_ten, email, vai_tro]):
-        return jsonify({
-            "status": "error",
-            "message": "Vui lòng nhập đầy đủ thông tin"
-        }), 400
+    if not ho_ten or not vai_tro:
+        return phan_hoi_loi(
+            "Vui long nhap ho ten va vai tro"
+        )
 
     if vai_tro not in ["Admin", "Manager", "Staff"]:
-        return jsonify({
-            "status": "error",
-            "message": "Vai trò không hợp lệ"
-        }), 400
+        return phan_hoi_loi("Vai tro khong hop le")
 
     connection = None
     cursor = None
@@ -1182,71 +1113,37 @@ def sua_nguoi_dung(ma_nguoi_dung):
         cursor = connection.cursor()
 
         cursor.execute("""
-            SELECT COUNT(*)
-            FROM dbo.NguoiDung
-            WHERE Email = ?
-              AND MaNguoiDung <> ?
-        """, (
-            email,
-            ma_nguoi_dung
-        ))
-
-        if cursor.fetchone()[0] > 0:
-            return jsonify({
-                "status": "error",
-                "message": "Email đã được sử dụng"
-            }), 400
-
-        cursor.execute("""
-            UPDATE dbo.NguoiDung
-            SET
-                HoTen = ?,
-                Email = ?,
-                VaiTro = ?,
-                NgayCapNhat = GETDATE()
+            UPDATE dbo.NGUOI_DUNG
+            SET HoTen = ?, VaiTro = ?
             WHERE MaNguoiDung = ?
-        """, (
-            ho_ten,
-            email,
-            vai_tro,
-            ma_nguoi_dung
-        ))
+        """, (ho_ten, vai_tro, ma_nguoi_dung))
 
         if cursor.rowcount == 0:
-            return jsonify({
-                "status": "error",
-                "message": "Không tìm thấy người dùng"
-            }), 404
+            return phan_hoi_loi("Khong tim thay nguoi dung", 404)
 
         connection.commit()
 
-        return jsonify({
-            "status": "success",
-            "message": "Cập nhật người dùng thành công"
-        })
+        return phan_hoi_thanh_cong(
+            "Cap nhat nguoi dung thanh cong"
+        )
 
     except Exception as error:
         if connection:
             connection.rollback()
 
-        return jsonify({
-            "status": "error",
-            "message": str(error)
-        }), 500
+        return phan_hoi_loi(str(error), 500)
 
     finally:
-        dong_ket_noi(connection, cursor)
+        dong_ket_noi_an_toan(cursor, connection)
 
 
-# Khóa người dùng
 @app.route("/api/nguoi-dung/<int:ma_nguoi_dung>", methods=["DELETE"])
 @yeu_cau_quyen("Admin")
 def xoa_nguoi_dung(ma_nguoi_dung):
     if ma_nguoi_dung == g.ma_nguoi_dung:
-        return jsonify({
-            "status": "error",
-            "message": "Không thể tự khóa tài khoản của mình"
-        }), 400
+        return phan_hoi_loi(
+            "Khong the tu khoa tai khoan cua minh"
+        )
 
     connection = None
     cursor = None
@@ -1256,41 +1153,32 @@ def xoa_nguoi_dung(ma_nguoi_dung):
         cursor = connection.cursor()
 
         cursor.execute("""
-            UPDATE dbo.NguoiDung
-            SET
-                TrangThai = 0,
-                NgayCapNhat = GETDATE()
-            WHERE MaNguoiDung = ?
-              AND TrangThai = 1
+            UPDATE dbo.NGUOI_DUNG
+            SET TrangThai = 0
+            WHERE MaNguoiDung = ? AND TrangThai = 1
         """, (ma_nguoi_dung,))
 
         if cursor.rowcount == 0:
-            return jsonify({
-                "status": "error",
-                "message": "Không tìm thấy người dùng đang hoạt động"
-            }), 404
+            return phan_hoi_loi(
+                "Khong tim thay nguoi dung dang hoat dong", 404
+            )
 
         connection.commit()
 
-        return jsonify({
-            "status": "success",
-            "message": "Đã khóa tài khoản người dùng"
-        })
+        return phan_hoi_thanh_cong(
+            "Da khoa tai khoan nguoi dung"
+        )
 
     except Exception as error:
         if connection:
             connection.rollback()
 
-        return jsonify({
-            "status": "error",
-            "message": str(error)
-        }), 500
+        return phan_hoi_loi(str(error), 500)
 
     finally:
-        dong_ket_noi(connection, cursor)
+        dong_ket_noi_an_toan(cursor, connection)
 
 
-# Mở khóa người dùng
 @app.route("/api/nguoi-dung/<int:ma_nguoi_dung>/mo-khoa", methods=["PUT"])
 @yeu_cau_quyen("Admin")
 def mo_khoa_nguoi_dung(ma_nguoi_dung):
@@ -1302,43 +1190,35 @@ def mo_khoa_nguoi_dung(ma_nguoi_dung):
         cursor = connection.cursor()
 
         cursor.execute("""
-            UPDATE dbo.NguoiDung
-            SET
-                TrangThai = 1,
-                NgayCapNhat = GETDATE()
-            WHERE MaNguoiDung = ?
-              AND TrangThai = 0
+            UPDATE dbo.NGUOI_DUNG
+            SET TrangThai = 1
+            WHERE MaNguoiDung = ? AND TrangThai = 0
         """, (ma_nguoi_dung,))
 
         if cursor.rowcount == 0:
-            return jsonify({
-                "status": "error",
-                "message": "Không tìm thấy tài khoản đang bị khóa"
-            }), 404
+            return phan_hoi_loi(
+                "Khong tim thay tai khoan dang bi khoa", 404
+            )
 
         connection.commit()
 
-        return jsonify({
-            "status": "success",
-            "message": "Mở khóa tài khoản thành công"
-        })
+        return phan_hoi_thanh_cong(
+            "Mo khoa tai khoan thanh cong"
+        )
 
     except Exception as error:
         if connection:
             connection.rollback()
 
-        return jsonify({
-            "status": "error",
-            "message": str(error)
-        }), 500
+        return phan_hoi_loi(str(error), 500)
 
     finally:
-        dong_ket_noi(connection, cursor)
+        dong_ket_noi_an_toan(cursor, connection)
 
 
-
-# 13. API NHẬT KÝ HOẠT ĐỘNG
-
+# =====================================================
+# 13. API NHAT KY
+# =====================================================
 
 @app.route("/api/nhat-ky", methods=["GET"])
 @yeu_cau_quyen("Admin")
@@ -1351,16 +1231,12 @@ def danh_sach_nhat_ky():
         cursor = connection.cursor()
 
         sql = """
-            SELECT
-                NK.MaNhatKy,
-                NK.MaNguoiDung,
-                ND.HoTen,
-                NK.HanhDong,
-                NK.ChiTiet,
-                NK.NgayTao
-            FROM dbo.NhatKyHoatDong NK
-            LEFT JOIN dbo.NguoiDung ND
-                ON NK.MaNguoiDung = ND.MaNguoiDung
+            SELECT A.LogID, A.MaNguoiDung, N.HoTen,
+                   A.HanhDong, A.BangTacDong, A.MaBanGhi,
+                   A.NoiDung, A.ThoiGian
+            FROM dbo.ACTIVITY_LOGS A
+            LEFT JOIN dbo.NGUOI_DUNG N
+                ON A.MaNguoiDung = N.MaNguoiDung
             WHERE 1 = 1
         """
 
@@ -1369,63 +1245,59 @@ def danh_sach_nhat_ky():
         hanh_dong = request.args.get("hanh_dong")
 
         if hanh_dong:
-            sql += " AND NK.HanhDong LIKE ?"
+            sql += " AND A.HanhDong LIKE ?"
             params.append(f"%{hanh_dong}%")
 
-        sql += " ORDER BY NK.NgayTao DESC"
+        sql += " ORDER BY A.ThoiGian DESC"
 
         cursor.execute(sql, params)
 
-        return jsonify({
-            "status": "success",
-            "data": convert_to_json(cursor)
-        })
+        return phan_hoi_thanh_cong(
+            data=convert_to_json(cursor)
+        )
 
     except Exception as error:
-        return jsonify({
-            "status": "error",
-            "message": str(error)
-        }), 500
+        return phan_hoi_loi(str(error), 500)
 
     finally:
-        dong_ket_noi(connection, cursor)
+        dong_ket_noi_an_toan(cursor, connection)
 
 
 # =====================================================
-# 14. XỬ LÝ LỖI API
+# 14. XU LY LOI
 # =====================================================
 
 @app.errorhandler(404)
 def loi_404(error):
-    return jsonify({
-        "status": "error",
-        "message": "Không tìm thấy đường dẫn API"
-    }), 404
+    if request.path.startswith("/api/"):
+        return phan_hoi_loi(
+            "Khong tim thay duong dan API", 404
+        )
+
+    return "Khong tim thay trang", 404
 
 
 @app.errorhandler(405)
 def loi_405(error):
-    return jsonify({
-        "status": "error",
-        "message": "Phương thức HTTP không được hỗ trợ"
-    }), 405
+    return phan_hoi_loi(
+        "Phuong thuc HTTP khong duoc ho tro", 405
+    )
 
 
 @app.errorhandler(500)
 def loi_500(error):
-    return jsonify({
-        "status": "error",
-        "message": "Đã xảy ra lỗi phía máy chủ"
-    }), 500
+    return phan_hoi_loi(
+        "Da xay ra loi phia may chu", 500
+    )
 
 
 # =====================================================
-# 15. KHỞI CHẠY BACKEND
+# 15. CHAY BACKEND
 # =====================================================
 
 if __name__ == "__main__":
     app.run(
-        host="127.0.0.1",
-        port=5000,
+        host="0.0.0.0",
+        port=int(os.getenv("PORT", 5000)),
         debug=True
     )

@@ -1,84 +1,83 @@
-
 import os
-import pyodbc
 from pathlib import Path
-from dotenv import load_dotenv
-from decimal import Decimal
 
-# Đọc file .env nằm trong thư mục backend
+import pyodbc
+from dotenv import load_dotenv
+
+
+# =========================================================
+# ĐỌC FILE .ENV
+# Cấu trúc:
+# QLTDNH/
+#   backend/.env
+#   database/db.py
+# =========================================================
+
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 ENV_FILE = PROJECT_ROOT / "backend" / ".env"
 
 load_dotenv(ENV_FILE, override=True)
 
 
-# =====================================================
-# 1. KẾT NỐI SQL SERVER
-# =====================================================
+# =========================================================
+# KẾT NỐI SQL SERVER
+# =========================================================
 
 def get_connection():
-    server = os.getenv("DB_SERVER")
-    database = os.getenv("DB_NAME")
-    driver = os.getenv(
-        "DB_DRIVER",
-        "ODBC Driver 17 for SQL Server"
-    )
+    driver = os.getenv("DB_DRIVER", "ODBC Driver 17 for SQL Server")
+    server = os.getenv("DB_SERVER", r"MSI\QLTDNH")
+    database = os.getenv("DB_NAME", "QLTD")
+    trusted = os.getenv("DB_TRUSTED_CONNECTION", "yes").lower()
 
-    trusted = os.getenv(
-        "DB_TRUSTED_CONNECTION",
-        "yes"
-    ).lower()
-
-    if not server or not database:
-        raise RuntimeError(
-            "Thiếu DB_SERVER hoặc DB_NAME trong file .env"
+    if trusted in ("yes", "true", "1"):
+        connection_string = (
+            f"DRIVER={{{driver}}};"
+            f"SERVER={server};"
+            f"DATABASE={database};"
+            "Trusted_Connection=yes;"
+            "TrustServerCertificate=yes;"
         )
-
-    connection_string = (
-        f"DRIVER={{{driver}}};"
-        f"SERVER={server};"
-        f"DATABASE={database};"
-    )
-
-    if trusted == "yes":
-        connection_string += "Trusted_Connection=yes;"
     else:
-        username = os.getenv("DB_USER")
-        password = os.getenv("DB_PASSWORD")
+        username = os.getenv("DB_USERNAME", "")
+        password = os.getenv("DB_PASSWORD", "")
 
-        if not username or not password:
-            raise RuntimeError(
-                "Thiếu DB_USER hoặc DB_PASSWORD trong file .env"
-            )
-
-        connection_string += (
+        connection_string = (
+            f"DRIVER={{{driver}}};"
+            f"SERVER={server};"
+            f"DATABASE={database};"
             f"UID={username};"
             f"PWD={password};"
+            "TrustServerCertificate=yes;"
         )
 
-    return pyodbc.connect(connection_string)
+    return pyodbc.connect(connection_string, timeout=5)
 
 
-# =====================================================
-# 2. ĐÓNG KẾT NỐI VÀ CURSOR
-# =====================================================
+# =========================================================
+# ĐÓNG KẾT NỐI
+# =========================================================
 
-def dong_ket_noi(connection, cursor=None):
+def dong_ket_noi(cursor=None, conn=None):
     try:
         if cursor is not None:
             cursor.close()
-    finally:
-        if connection is not None:
-            connection.close()
+    except Exception:
+        pass
+
+    try:
+        if conn is not None:
+            conn.close()
+    except Exception:
+        pass
 
 
-# =====================================================
-# 3. CHUYỂN KẾT QUẢ SQL SERVER THÀNH DANH SÁCH JSON
-# =====================================================
+# =========================================================
+# CHUYỂN DỮ LIỆU SQL SERVER SANG JSON
+# =========================================================
 
 def convert_to_json(cursor):
-    rows = cursor.fetchall()
     columns = [column[0] for column in cursor.description]
+    rows = cursor.fetchall()
 
     result = []
 
@@ -88,8 +87,8 @@ def convert_to_json(cursor):
         for index, column in enumerate(columns):
             value = row[index]
 
-            if isinstance(value, Decimal):
-                value = float(value)
+            if hasattr(value, "isoformat"):
+                value = value.isoformat()
 
             item[column] = value
 
@@ -98,26 +97,21 @@ def convert_to_json(cursor):
     return result
 
 
-# =====================================================
-# 4. CHUYỂN MỘT DÒNG DỮ LIỆU THÀNH DICTIONARY
-# =====================================================
-
 def convert_one_to_json(cursor):
+    columns = [column[0] for column in cursor.description]
     row = cursor.fetchone()
 
     if row is None:
         return None
 
-    columns = [column[0] for column in cursor.description]
-
-    item = {}
+    result = {}
 
     for index, column in enumerate(columns):
         value = row[index]
 
-        if isinstance(value, Decimal):
-            value = float(value)
+        if hasattr(value, "isoformat"):
+            value = value.isoformat()
 
-        item[column] = value
+        result[column] = value
 
-    return item
+    return result
