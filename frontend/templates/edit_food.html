@@ -37,9 +37,10 @@
             <div class="admin-info">
                 <div class="avatar">A</div>
                 <div>
-                    <strong>Quản trị viên</strong>
-                    <small>Administrator</small>
+                    <strong data-user-name>Người dùng</strong>
+                    <small data-user-role>Nhân viên</small>
                 </div>
+                <a href="#" class="secondary-btn" data-logout>Đăng xuất</a>
             </div>
         </header>
 
@@ -54,7 +55,7 @@
             <div class="form-heading">
                 <div>
                     <h3>Cập nhật thông tin món ăn</h3>
-                    <p>Đang chỉnh sửa món có mã MA{{ "%03d"|format(food_id) }}.</p>
+                    <p>Đang chỉnh sửa món có mã số {{ food_id }}.</p>
                 </div>
                 <span class="form-icon">🍜</span>
             </div>
@@ -72,7 +73,8 @@
                         <label>Mã món ăn</label>
                         <input
                             type="text"
-                            value="MA{{ '%03d'|format(food_id) }}"
+                            id="foodCode"
+                            placeholder="Đang tải..."
                             readonly
                         >
                     </div>

@@ -13,3 +13,5 @@ node_modules/
 
 # VS Code
 .vscode/
+# Ảnh người dùng tải lên
+frontend/static/uploads/

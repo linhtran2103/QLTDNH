@@ -1,38 +1,50 @@
+"""Tạo tài khoản Admin đầu tiên. Chạy:  python backend/create_admin.py"""
 import sys
+from getpass import getpass
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from database.db import get_connection
+from werkzeug.security import generate_password_hash  # noqa: E402
 
-ten_dang_nhap = input("Tên đăng nhập: ").strip()
-mat_khau = input("Mật khẩu: ").strip()
-ho_ten = input("Họ tên: ").strip()
+from database.db import db_cursor  # noqa: E402
 
-conn = None
-cursor = None
 
-try:
-    conn = get_connection()
-    cursor = conn.cursor()
+def main():
+    ten_dang_nhap = input("Tên đăng nhập: ").strip()
+    ho_ten = input("Họ tên: ").strip()
+    mat_khau = getpass("Mật khẩu (tối thiểu 6 ký tự): ")
 
-    cursor.execute("""
-        INSERT INTO NGUOI_DUNG
-            (TenDangNhap, MatKhauHash, HoTen, VaiTro, TrangThai)
-        VALUES (?, ?, ?, ?, 1)
-    """, ten_dang_nhap, mat_khau, ho_ten, "admin")
+    if not (ten_dang_nhap and ho_ten and len(mat_khau) >= 6):
+        print("Thông tin không hợp lệ.")
+        return 1
 
-    conn.commit()
-    print("Tạo tài khoản admin thành công!")
+    try:
+        with db_cursor(commit=True) as cursor:
+            cursor.execute(
+                "SELECT COUNT(*) FROM NGUOI_DUNG WHERE TenDangNhap = ?",
+                (ten_dang_nhap,),
+            )
+            if cursor.fetchone()[0] > 0:
+                print("Tên đăng nhập đã tồn tại.")
+                return 1
 
-except Exception as e:
-    if conn:
-        conn.rollback()
-    print("Lỗi:", e)
+            cursor.execute(
+                """
+                INSERT INTO NGUOI_DUNG
+                    (TenDangNhap, MatKhauHash, HoTen, VaiTro, TrangThai, NgayTao)
+                VALUES (?, ?, ?, 'admin', 1, GETDATE())
+                """,
+                (ten_dang_nhap, generate_password_hash(mat_khau), ho_ten),
+            )
+    except Exception as error:
+        print("Lỗi:", error)
+        return 1
 
-finally:
-    if cursor:
-        cursor.close()
-    if conn:
-        conn.close()
+    print("Tạo tài khoản Admin thành công!")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
