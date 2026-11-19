@@ -19,9 +19,10 @@ Hệ thống quản lý món ăn và danh mục cho nhà hàng, có đăng nhậ
 ## Cài đặt
 1. Cài Python 3, SQL Server và **ODBC Driver 17 for SQL Server**.
 2. Khôi phục `database/backup/QLTDNH.bak` vào SQL Server.
-3. Chạy một lần script `database/migrations/001_tables_and_orders.sql` trên
-   database QLTDNH. Script tạo dữ liệu cho 6 bàn, bảng đơn gọi món và khóa
-   tài khoản khách hàng cũ; tài khoản vai trò `user` cũ được chuyển thành nhân viên.
+3. Chạy lần lượt `database/migrations/001_tables_and_orders.sql` và
+   `database/migrations/002_customer_order_access.sql` trên database QLTDNH.
+   Migration đầu tạo 6 bàn/bảng đơn và chuẩn hóa vai trò; migration thứ hai
+   thêm trường lưu hash để khách chỉ sửa/xóa đơn của mình bằng token riêng.
 4. Cài thư viện:
    ```powershell
    pip install -r requirements.txt
