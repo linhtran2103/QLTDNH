@@ -35,8 +35,11 @@ document.addEventListener("DOMContentLoaded", () => {
         moi: "Mới", dang_chuan_bi: "Đang chuẩn bị",
         hoan_thanh: "Hoàn thành", huy: "Đã hủy"
     };
+    let loading = false;
 
     async function loadOrders() {
+        if (loading) return;
+        loading = true;
         list.textContent = "Đang tải đơn hàng...";
         try {
             const response = await fetch("/api/don-hang", {
@@ -109,11 +112,16 @@ document.addEventListener("DOMContentLoaded", () => {
             });
         } catch (error) {
             list.textContent = error.message;
+        } finally {
+            loading = false;
         }
     }
 
     document.getElementById("refreshOrders").addEventListener("click", loadOrders);
     loadOrders();
+    window.setInterval(() => {
+        if (!document.hidden) loadOrders();
+    }, 10000);
 });
 </script>
 {% endblock %}

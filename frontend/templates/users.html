@@ -83,6 +83,16 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         });
         const result = await response.json();
+        if (response.status === 401) {
+            localStorage.removeItem("qltdnh_token");
+            localStorage.removeItem("qltdnh_user");
+            showMessage("Phiên đăng nhập đã hết hạn. Đang chuyển đến trang đăng nhập...");
+            window.setTimeout(() => window.location.replace("/login"), 1200);
+            throw new Error("Vui lòng đăng nhập lại bằng tài khoản Admin.");
+        }
+        if (response.status === 403) {
+            throw new Error("Chỉ Admin mới được quản lý tài khoản nhân sự.");
+        }
         if (!response.ok || result.status !== "success") {
             throw new Error(result.message || "Yêu cầu không thành công.");
         }

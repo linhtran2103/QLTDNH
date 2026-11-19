@@ -87,4 +87,4 @@ def yeu_cau_dang_nhap(func=None, *, admin=False):
     return decorator(func) if func else decorator
 
 
-chi_admin = yeu_cau_dang_nhap(admin=True)
+chi_admin = yeu_cau_dang_nhap(admin=True) 
