@@ -2,6 +2,7 @@
 {% extends "base.html" %}
 
 {% block content %}
+{% include "_navbar.html" %}
 <div class="container-fluid py-4">
 
     <div class="d-flex justify-content-between align-items-center mb-4">
@@ -10,7 +11,8 @@
             <p class="text-muted mb-0">Quản lý các danh mục món ăn nhà hàng RestoMenu</p>
         </div>
 
-        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addCategoryModal">
+        <button class="btn btn-primary" data-roles="admin,manager"
+            data-bs-toggle="modal" data-bs-target="#addCategoryModal">
             + Thêm danh mục
         </button>
     </div>
@@ -53,7 +55,7 @@
                 type="text"
                 id="categorySearch"
                 class="form-control"
-                placeholder="Nhập tên hoặc ký hiệu danh mục..."
+                placeholder="Nhập tên danh mục..."
             >
         </div>
     </div>
@@ -73,7 +75,7 @@
                     <thead class="table-light">
                         <tr>
                             <th class="ps-3">Mã danh mục</th>
-                            <th>Ký hiệu</th>
+                            <th>Thứ tự</th>
                             <th>Tên danh mục</th>
                             <th>Mô tả</th>
                             <th>Trạng thái</th>
@@ -100,7 +102,7 @@
 </div>
 
 <!-- MODAL THÊM DANH MỤC -->
-<div class="modal fade" id="addCategoryModal" tabindex="-1">
+<div class="modal fade" id="addCategoryModal" data-roles="admin,manager" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
             <form id="addCategoryForm">
@@ -111,13 +113,13 @@
 
                 <div class="modal-body">
                     <div class="mb-3">
-                        <label for="newCategoryCode" class="form-label">Ký hiệu danh mục</label>
+                        <label for="newCategoryCode" class="form-label">Thứ tự hiển thị</label>
                         <input
-                            type="text"
+                            type="number"
                             class="form-control"
                             id="newCategoryCode"
-                            placeholder="Ví dụ: DM01"
-                            required
+                            min="0"
+                            placeholder="Để trống: xếp cuối danh sách"
                         >
                     </div>
 
@@ -157,7 +159,7 @@
 </div>
 
 <!-- MODAL SỬA DANH MỤC -->
-<div class="modal fade" id="editCategoryModal" tabindex="-1">
+<div class="modal fade" id="editCategoryModal" data-roles="admin,manager" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
             <form id="editCategoryForm">
@@ -170,8 +172,8 @@
                     <input type="hidden" id="editCategoryId">
 
                     <div class="mb-3">
-                        <label for="editCategoryCode" class="form-label">Ký hiệu danh mục</label>
-                        <input type="text" class="form-control" id="editCategoryCode" disabled>
+                        <label for="editCategoryCode" class="form-label">Thứ tự hiển thị</label>
+                        <input type="number" class="form-control" id="editCategoryCode" min="0">
                     </div>
 
                     <div class="mb-3">
@@ -206,6 +208,15 @@
 document.addEventListener("DOMContentLoaded", function () {
     const API_URL = "/api/danh-muc";
     const token = localStorage.getItem("qltdnh_token");
+    let storedUser = null;
+    try {
+        storedUser = JSON.parse(localStorage.getItem("qltdnh_user") || "null");
+    } catch {
+        localStorage.removeItem("qltdnh_user");
+    }
+    const canManage = ["admin", "manager"].includes(
+        String(storedUser?.VaiTro || "").toLowerCase()
+    );
 
     const tableBody = document.getElementById("categoryTableBody");
     const searchInput = document.getElementById("categorySearch");
@@ -246,6 +257,13 @@ document.addEventListener("DOMContentLoaded", function () {
 
         const result = await response.json();
 
+        if (response.status === 401) {
+            localStorage.removeItem("qltdnh_token");
+            localStorage.removeItem("qltdnh_user");
+            window.location.href = "/login";
+            throw new Error(result.message || "Bạn cần đăng nhập lại.");
+        }
+
         if (!response.ok || result.status !== "success") {
             throw new Error(result.message || "Có lỗi xảy ra.");
         }
@@ -267,9 +285,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
         const filtered = categories.filter(category => {
             const name = String(category.TenDanhMuc || "").toLowerCase();
-            const code = String(category.KyHieuDanhMuc || "").toLowerCase();
-
-            return name.includes(keyword) || code.includes(keyword);
+            return name.includes(keyword);
         });
 
         if (filtered.length === 0) {
@@ -283,11 +299,24 @@ document.addEventListener("DOMContentLoaded", function () {
         } else {
             tableBody.innerHTML = filtered.map(category => {
                 const active = isActive(category);
+                const actions = canManage
+                    ? `<button
+                        class="btn btn-sm btn-outline-primary me-1"
+                        data-action="edit"
+                        data-id="${escapeHTML(category.MaDanhMuc)}"
+                        ${active ? "" : "disabled"}
+                    >Sửa</button>
+                    ${active ? `<button
+                        class="btn btn-sm btn-outline-danger"
+                        data-action="delete"
+                        data-id="${escapeHTML(category.MaDanhMuc)}"
+                    >Ngừng</button>` : ""}`
+                    : "—";
 
                 return `
                     <tr>
                         <td class="ps-3">${escapeHTML(category.MaDanhMuc)}</td>
-                        <td>${escapeHTML(category.KyHieuDanhMuc)}</td>
+                        <td>${escapeHTML(category.ThuTuHienThi)}</td>
                         <td class="fw-semibold">${escapeHTML(category.TenDanhMuc)}</td>
                         <td>${escapeHTML(category.MoTa || "Chưa có mô tả")}</td>
                         <td>
@@ -295,26 +324,7 @@ document.addEventListener("DOMContentLoaded", function () {
                                 ${active ? "Đang hoạt động" : "Ngừng hoạt động"}
                             </span>
                         </td>
-                        <td>
-                            <button
-                                class="btn btn-sm btn-outline-primary me-1"
-                                data-action="edit"
-                                data-id="${escapeHTML(category.MaDanhMuc)}"
-                                ${active ? "" : "disabled"}
-                            >
-                                Sửa
-                            </button>
-
-                            ${
-                                active
-                                ? `<button
-                                    class="btn btn-sm btn-outline-danger"
-                                    data-action="delete"
-                                    data-id="${escapeHTML(category.MaDanhMuc)}"
-                                >Ngừng</button>`
-                                : ""
-                            }
-                        </td>
+                        <td>${actions}</td>
                     </tr>
                 `;
             }).join("");
@@ -357,7 +367,7 @@ document.addEventListener("DOMContentLoaded", function () {
         event.preventDefault();
 
         const data = {
-            KyHieuDanhMuc: document.getElementById("newCategoryCode").value.trim(),
+            ThuTuHienThi: document.getElementById("newCategoryCode").value.trim() || null,
             TenDanhMuc: document.getElementById("newCategoryName").value.trim(),
             MoTa: document.getElementById("newCategoryDescription").value.trim()
         };
@@ -397,7 +407,7 @@ document.addEventListener("DOMContentLoaded", function () {
         if (button.dataset.action === "edit") {
             document.getElementById("editCategoryId").value = category.MaDanhMuc;
             document.getElementById("editCategoryCode").value =
-                category.KyHieuDanhMuc || "";
+                category.ThuTuHienThi ?? "";
             document.getElementById("editCategoryName").value =
                 category.TenDanhMuc || "";
             document.getElementById("editCategoryDescription").value =
@@ -427,7 +437,8 @@ document.addEventListener("DOMContentLoaded", function () {
 
         const data = {
             TenDanhMuc: document.getElementById("editCategoryName").value.trim(),
-            MoTa: document.getElementById("editCategoryDescription").value.trim()
+            MoTa: document.getElementById("editCategoryDescription").value.trim(),
+            ThuTuHienThi: document.getElementById("editCategoryCode").value.trim() || null
         };
 
         try {

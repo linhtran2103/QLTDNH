@@ -56,6 +56,7 @@
                     <strong data-user-name>Quản trị viên</strong>
                     <small data-user-role>Administrator</small>
                 </div>
+                <a href="#" class="secondary-btn" data-logout>Đăng xuất</a>
             </div>
         </header>
 
@@ -99,7 +100,7 @@
                     <span class="stat-label">MENU</span>
                 </div>
                 <p>Tổng số món ăn</p>
-                <h2>0</h2>
+                <h2 id="totalFoods">0</h2>
                 <small>Số món trong thực đơn</small>
             </div>
 
@@ -109,7 +110,7 @@
                     <span class="stat-label">CATEGORY</span>
                 </div>
                 <p>Tổng danh mục</p>
-                <h2>0</h2>
+                <h2 id="totalCategories">0</h2>
                 <small>Các nhóm món ăn</small>
             </div>
 
@@ -119,7 +120,7 @@
                     <span class="stat-label">ACTIVE</span>
                 </div>
                 <p>Đang phục vụ</p>
-                <h2>0</h2>
+                <h2 id="availableFoods">0</h2>
                 <small>Món đang kinh doanh</small>
             </div>
 
@@ -129,7 +130,7 @@
                     <span class="stat-label">INACTIVE</span>
                 </div>
                 <p>Ngừng phục vụ</p>
-                <h2>0</h2>
+                <h2 id="unavailableFoods">0</h2>
                 <small>Món tạm ngừng kinh doanh</small>
             </div>
 
@@ -165,11 +166,38 @@
                     <span class="quick-action-arrow">→</span>
                 </a>
 
-                <a href="/foods/add" class="quick-action-item">
+                <a href="/foods/add" class="quick-action-item" data-roles="admin,manager">
                     <div class="quick-action-icon">＋</div>
                     <div>
                         <h4>Thêm món mới</h4>
                         <p>Bổ sung món ăn vào thực đơn.</p>
+                    </div>
+                    <span class="quick-action-arrow">→</span>
+                </a>
+
+                <a href="/orders" class="quick-action-item">
+                    <div class="quick-action-icon">▤</div>
+                    <div>
+                        <h4>Đơn gọi món</h4>
+                        <p>Xem và cập nhật trạng thái đơn từ khách.</p>
+                    </div>
+                    <span class="quick-action-arrow">→</span>
+                </a>
+
+                <a href="/tables" class="quick-action-item" data-roles="admin,manager">
+                    <div class="quick-action-icon">▦</div>
+                    <div>
+                        <h4>Bàn và mã QR</h4>
+                        <p>Đổi tên bàn và in mã QR gọi món.</p>
+                    </div>
+                    <span class="quick-action-arrow">→</span>
+                </a>
+
+                <a href="/users" class="quick-action-item" data-roles="admin">
+                    <div class="quick-action-icon">♙</div>
+                    <div>
+                        <h4>Tài khoản nhân sự</h4>
+                        <p>Tạo tài khoản quản lý và nhân viên.</p>
                     </div>
                     <span class="quick-action-arrow">→</span>
                 </a>

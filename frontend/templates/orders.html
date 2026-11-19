@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+
+{% block title %}Đơn gọi món | RestoMenu{% endblock %}
+
+{% block content %}
+{% include "_navbar.html" %}
+<main class="container py-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+        <div>
+            <h1 class="h3 fw-bold mb-1">Đơn gọi món</h1>
+            <p class="text-muted mb-0">Theo dõi đơn khách gửi từ mã QR trên bàn.</p>
+        </div>
+        <button class="btn btn-outline-primary" id="refreshOrders">Làm mới</button>
+    </div>
+    <div id="ordersMessage" class="alert d-none" role="alert"></div>
+    <div id="ordersList" class="row g-3">
+        <div class="col-12 text-muted">Đang tải đơn hàng...</div>
+    </div>
+</main>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    const list = document.getElementById("ordersList");
+    const message = document.getElementById("ordersMessage");
+    const token = localStorage.getItem("qltdnh_token");
+    const money = value => new Intl.NumberFormat("vi-VN", {
+        style: "currency", currency: "VND"
+    }).format(Number(value) || 0);
+    const escapeHTML = value => String(value ?? "").replace(/[&<>"']/g, char => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;"
+    })[char]);
+    const statuses = {
+        moi: "Mới", dang_chuan_bi: "Đang chuẩn bị",
+        hoan_thanh: "Hoàn thành", huy: "Đã hủy"
+    };
+
+    async function loadOrders() {
+        list.textContent = "Đang tải đơn hàng...";
+        try {
+            const response = await fetch("/api/don-hang", {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            const result = await response.json();
+            if (!response.ok || result.status !== "success") {
+                throw new Error(result.message || "Không tải được đơn hàng.");
+            }
+            list.replaceChildren();
+            if (!result.data.length) {
+                list.textContent = "Chưa có đơn gọi món.";
+                return;
+            }
+            result.data.forEach(order => {
+                const column = document.createElement("div");
+                column.className = "col-12 col-lg-6";
+                const details = order.ChiTiet.map(item => `
+                    <li>${escapeHTML(item.TenMonAn)} × ${item.SoLuong}
+                        — ${money(Number(item.DonGia) * Number(item.SoLuong))}
+                        ${item.GhiChu ? `<small class="text-muted">(${escapeHTML(item.GhiChu)})</small>` : ""}
+                    </li>`).join("");
+                const select = order.TrangThai === "hoan_thanh" || order.TrangThai === "huy"
+                    ? `<span class="badge text-bg-secondary">${statuses[order.TrangThai]}</span>`
+                    : `<select class="form-select form-select-sm order-status" data-id="${order.MaDonHang}">
+                        <option value="moi" ${order.TrangThai === "moi" ? "selected" : ""}>Mới</option>
+                        <option value="dang_chuan_bi" ${order.TrangThai === "dang_chuan_bi" ? "selected" : ""}>Đang chuẩn bị</option>
+                        <option value="hoan_thanh">Hoàn thành</option>
+                        <option value="huy">Hủy</option>
+                    </select>`;
+                column.innerHTML = `
+                    <article class="card h-100 shadow-sm">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between gap-2">
+                                <h2 class="h5 fw-bold">#${order.MaDonHang} · ${escapeHTML(order.TenBan)}</h2>
+                                ${select}
+                            </div>
+                            <small class="text-muted">${new Date(order.NgayTao).toLocaleString("vi-VN")}</small>
+                            <ul class="mt-3">${details}</ul>
+                            ${order.GhiChu ? `<p class="small"><strong>Ghi chú:</strong> ${escapeHTML(order.GhiChu)}</p>` : ""}
+                            <strong>Tổng: ${money(order.TongTien)}</strong>
+                        </div>
+                    </article>`;
+                list.appendChild(column);
+            });
+            list.querySelectorAll(".order-status").forEach(select => {
+                select.addEventListener("change", async () => {
+                    select.disabled = true;
+                    try {
+                        const response = await fetch(`/api/don-hang/${select.dataset.id}/trang-thai`, {
+                            method: "PUT",
+                            headers: {
+                                "Content-Type": "application/json",
+                                Authorization: `Bearer ${token}`
+                            },
+                            body: JSON.stringify({ TrangThai: select.value })
+                        });
+                        const result = await response.json();
+                        if (!response.ok || result.status !== "success") {
+                            throw new Error(result.message || "Không cập nhật được đơn.");
+                        }
+                        await loadOrders();
+                    } catch (error) {
+                        message.className = "alert alert-danger";
+                        message.textContent = error.message;
+                        message.classList.remove("d-none");
+                        select.disabled = false;
+                    }
+                });
+            });
+        } catch (error) {
+            list.textContent = error.message;
+        }
+    }
+
+    document.getElementById("refreshOrders").addEventListener("click", loadOrders);
+    loadOrders();
+});
+</script>
+{% endblock %}

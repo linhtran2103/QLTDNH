@@ -1,258 +1,156 @@
+document.addEventListener("DOMContentLoaded", async function () {
 
-const TOKEN_KEY = "qltdnh_token";
-const USER_KEY = "qltdnh_user";
-const API_URL = "";
+    // ==========================================
+    // 1. CAU HINH CHUNG
+    // ==========================================
 
-// =====================================
-// HIỂN THỊ THÔNG TIN NGƯỜI DÙNG
-// =====================================
-function hienThiNguoiDung() {
-    let user = {};
-
-    try {
-        user = JSON.parse(localStorage.getItem(USER_KEY) || "{}");
-    } catch (error) {
-        console.error("Lỗi đọc thông tin người dùng:", error);
-    }
-
-    const nameElement = document.querySelector("[data-user-name]");
-    const roleElement = document.querySelector("[data-user-role]");
-    const avatarElement = document.querySelector(".avatar");
-
-    const hoTen = user.HoTen || user.TenDangNhap || "Người dùng";
-    const vaiTro = String(user.VaiTro || "").toLowerCase().trim();
-
-    let tenVaiTro = "Khách hàng";
-
-    if (vaiTro === "admin") {
-        tenVaiTro = "Quản trị viên";
-    } else if (vaiTro === "user") {
-        tenVaiTro = "Khách hàng";
-    }
-
-    if (nameElement) {
-        nameElement.textContent = hoTen;
-    }
-
-    if (roleElement) {
-        roleElement.textContent = tenVaiTro;
-    }
-
-    if (avatarElement) {
-        avatarElement.textContent = hoTen.charAt(0).toUpperCase();
-    }
-}
-
-// =====================================
-// GỌI API
-// =====================================
-async function apiRequest(url, options = {}) {
-    const headers = { ...(options.headers || {}) };
-
-    const token = localStorage.getItem(TOKEN_KEY);
-
-    if (token) {
-        headers.Authorization = "Bearer " + token;
-    }
-
-    if (options.body && !(options.body instanceof FormData)) {
-        headers["Content-Type"] = "application/json";
-    }
-
-    const response = await fetch(API_URL + url, {
-        ...options,
-        headers
+    const currencyFormatter = new Intl.NumberFormat("vi-VN", {
+        style: "currency",
+        currency: "VND"
     });
 
-    let result;
+    const TOKEN_KEY = "qltdnh_token";
+    const USER_KEY = "qltdnh_user";
 
-    try {
-        result = await response.json();
-    } catch {
-        throw new Error("Máy chủ trả về dữ liệu không hợp lệ.");
+    let allFoods = [];
+    let allCategories = [];
+
+    function getToken() {
+        return localStorage.getItem(TOKEN_KEY);
     }
 
-    if (!response.ok || result.success === false) {
+    function getUser() {
+        try {
+            return JSON.parse(localStorage.getItem(USER_KEY) || "null");
+        } catch {
+            return null;
+        }
+    }
+
+    // Chưa đăng nhập thì chuyển về trang đăng nhập (trừ chính trang đăng nhập)
+    const isLoginPage = window.location.pathname.startsWith("/login");
+    const isPublicOrderPage = window.location.pathname.startsWith("/order/");
+    const currentPath = window.location.pathname;
+    const currentRole = String(getUser()?.VaiTro || "").toLowerCase();
+    const requiredRoles =
+        currentPath === "/users"
+            ? ["admin"]
+            : currentPath === "/tables" ||
+              currentPath === "/foods/add" ||
+              currentPath.startsWith("/foods/edit/")
+                ? ["admin", "manager"]
+                : null;
+
+    if (!isLoginPage && !isPublicOrderPage && !getToken()) {
+        window.location.replace("/login");
+        return;
+    }
+
+    if (requiredRoles && !requiredRoles.includes(currentRole)) {
+        window.location.replace(currentRole ? "/" : "/login");
+        return;
+    }
+
+    function getHeaders(json = true) {
+        const headers = {};
+
+        if (json) {
+            headers["Content-Type"] = "application/json";
+        }
+
+        const token = getToken();
+
+        if (token) {
+            headers.Authorization = `Bearer ${token}`;
+        }
+
+        return headers;
+    }
+
+    async function apiRequest(url, options = {}) {
+        const response = await fetch(url, {
+            ...options,
+            headers: {
+                ...getHeaders(),
+                ...(options.headers || {})
+            }
+        });
+
+        let result;
+
+        try {
+            result = await response.json();
+        } catch {
+            throw new Error("Máy chủ trả về dữ liệu không hợp lệ.");
+        }
+
         if (response.status === 401) {
             localStorage.removeItem(TOKEN_KEY);
             localStorage.removeItem(USER_KEY);
+
+            if (!window.location.pathname.includes("/login")) {
+                alert("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.");
+                window.location.href = "/login";
+            }
+
+            throw new Error(result.message || "Bạn cần đăng nhập lại.");
         }
 
-        throw new Error(result.message || "Có lỗi xảy ra khi gọi API.");
+        if (!response.ok || result.status !== "success") {
+            throw new Error(result.message || "Có lỗi xảy ra.");
+        }
+
+        return result;
     }
 
-    return result;
-}
+    // Tải ảnh lên máy chủ, trả về đường dẫn ảnh
+    async function uploadImage(file) {
+        const formData = new FormData();
+        formData.append("image", file);
 
-// =====================================
-// HIỂN THỊ THÔNG BÁO
-// =====================================
-function showMessage(element, message, type = "danger") {
-    if (!element) return;
-
-    element.textContent = message;
-    element.className = "mb-3 text-" + type;
-}
-
-// =====================================
-// HÀM HỖ TRỢ
-// =====================================
-function escapeHTML(value) {
-    return String(value ?? "").replace(/[&<>"']/g, function (char) {
-        const entities = {
-            "&": "&amp;",
-            "<": "&lt;",
-            ">": "&gt;",
-            '"': "&quot;",
-            "'": "&#39;"
-        };
-
-        return entities[char];
-    });
-}
-
-function isAvailable(value) {
-    return value === true ||
-        value === 1 ||
-        value === "1" ||
-        value === "true";
-}
-
-function formatPrice(value) {
-    return Number(value || 0).toLocaleString("vi-VN") + " đ";
-}
-
-// =====================================
-// ĐĂNG NHẬP
-// =====================================
-const loginForm = document.getElementById("loginForm");
-
-if (loginForm) {
-    loginForm.addEventListener("submit", async function (event) {
-        event.preventDefault();
-
-        const username = document.getElementById("username").value.trim();
-        const password = document.getElementById("password").value;
-
-        const message = document.getElementById("loginMessage");
-        const button = loginForm.querySelector('button[type="submit"]');
-
-        if (!username || !password) {
-            showMessage(message, "Vui lòng nhập đầy đủ thông tin!");
-            return;
-        }
-
-        try {
-            button.disabled = true;
-            button.textContent = "Đang đăng nhập...";
-
-            const result = await apiRequest("/api/dang-nhap", {
-                method: "POST",
-                body: JSON.stringify({
-                    TenDangNhap: username,
-                    MatKhau: password
-                })
-            });
-
-            // Backend trả token ở result.token
-            // Thông tin người dùng nằm ở result.data
-            const token = result.token;
-            const user = result.data || {};
-
-            if (!token) {
-                throw new Error("Không nhận được token đăng nhập.");
-            }
-
-            if (!user.VaiTro) {
-                throw new Error("Backend chưa trả về vai trò người dùng.");
-            }
-
-            // Xóa thông tin đăng nhập cũ
-            localStorage.removeItem(TOKEN_KEY);
-            localStorage.removeItem(USER_KEY);
-
-            // Lưu thông tin đăng nhập mới
-            localStorage.setItem(TOKEN_KEY, token);
-            localStorage.setItem(USER_KEY, JSON.stringify(user));
-
-            showMessage(message, "Đăng nhập thành công!", "success");
-
-            window.location.href = "/";
-
-        } catch (error) {
-            showMessage(message, error.message);
-        } finally {
-            button.disabled = false;
-            button.textContent = "Đăng nhập";
-        }
-    });
-}
-
-// =====================================
-// TẢI DANH MỤC
-// =====================================
-async function loadCategories(selectElement, includeAll = false) {
-    if (!selectElement) return;
-
-    selectElement.innerHTML = "";
-
-    const firstOption = document.createElement("option");
-    firstOption.value = "";
-    firstOption.textContent = includeAll
-        ? "Tất cả danh mục"
-        : "Đang tải danh mục...";
-
-    selectElement.appendChild(firstOption);
-
-    try {
-        const result = await apiRequest("/api/danh-muc");
-        const categories = result.data || [];
-
-        selectElement.innerHTML = "";
-
-        const defaultOption = document.createElement("option");
-        defaultOption.value = "";
-        defaultOption.textContent = includeAll
-            ? "Tất cả danh mục"
-            : "Chọn danh mục";
-
-        selectElement.appendChild(defaultOption);
-
-        categories.forEach(function (category) {
-            if (
-                category.TrangThai === false ||
-                Number(category.TrangThai) === 0
-            ) {
-                return;
-            }
-
-            const option = document.createElement("option");
-            option.value = category.MaDanhMuc;
-            option.textContent = category.TenDanhMuc;
-
-            selectElement.appendChild(option);
+        const response = await fetch("/api/upload-anh", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${getToken()}` },
+            body: formData
         });
 
-        return categories;
+        let result = {};
 
-    } catch (error) {
-        console.error("Lỗi tải danh mục:", error);
+        try {
+            result = await response.json();
+        } catch {
+            throw new Error("Máy chủ trả về dữ liệu không hợp lệ.");
+        }
 
-        selectElement.innerHTML =
-            '<option value="">Không tải được danh mục</option>';
+        if (!response.ok || result.status !== "success") {
+            throw new Error(result.message || "Không thể tải ảnh lên.");
+        }
 
-        return [];
+        return result.data.url;
     }
-}
 
-// =====================================
-// QUẢN LÝ DANH SÁCH MÓN ĂN
-// =====================================
-const foodTableBody = document.getElementById("foodTableBody");
+    function escapeHTML(value) {
+        return String(value ?? "").replace(/[&<>"']/g, function (char) {
+            return {
+                "&": "&amp;",
+                "<": "&lt;",
+                ">": "&gt;",
+                '"': "&quot;",
+                "'": "&#039;"
+            }[char];
+        });
+    }
 
-if (foodTableBody) {
-    let allFoods = [];
+    function isActive(value) {
+        return value === true || value === 1 || value === "1";
+    }
 
+
+    // ==========================================
+    // 2. DANH SACH MON AN
+    // ==========================================
+
+    const foodTableBody = document.getElementById("foodTableBody");
     const foodSearch = document.getElementById("foodSearch");
     const categoryFilter = document.getElementById("categoryFilter");
     const statusFilter = document.getElementById("statusFilter");
@@ -263,144 +161,16 @@ if (foodTableBody) {
     const totalCategories = document.getElementById("totalCategories");
     const resultCount = document.getElementById("resultCount");
 
-    // Cập nhật thống kê
-    function updateStatistics() {
-        const available = allFoods.filter(food =>
-            isAvailable(food.ConKinhDoanh)
-        ).length;
-
-        const unavailable = allFoods.length - available;
-
-        if (totalFoods) totalFoods.textContent = allFoods.length;
-        if (availableFoods) availableFoods.textContent = available;
-        if (unavailableFoods) unavailableFoods.textContent = unavailable;
-    }
-
-    // Hiển thị bảng món ăn
-    function renderFoods(foods) {
-        foodTableBody.innerHTML = "";
-
-        if (foods.length === 0) {
-            foodTableBody.innerHTML = `
-                <tr>
-                    <td colspan="6" class="text-center py-4 text-muted">
-                        Không tìm thấy món ăn phù hợp.
-                    </td>
-                </tr>
-            `;
-
-            if (resultCount) {
-                resultCount.textContent = "Không có món ăn nào.";
-            }
-
-            return;
-        }
-
-        foods.forEach(function (food) {
-            const available = isAvailable(food.ConKinhDoanh);
-
-            const statusHTML = available
-                ? '<span class="badge bg-success">Đang phục vụ</span>'
-                : '<span class="badge bg-danger">Ngừng phục vụ</span>';
-
-            const row = document.createElement("tr");
-
-            row.innerHTML = `
-                <td class="ps-3">${escapeHTML(food.MaMon || "")}</td>
-
-                <td>
-                    <span class="fw-semibold">
-                        ${escapeHTML(food.TenMonAn || "")}
-                    </span>
-                    ${
-                        food.MoTa
-                            ? `<br><small class="text-muted">${escapeHTML(food.MoTa)}</small>`
-                            : ""
-                    }
-                </td>
-
-                <td>${escapeHTML(food.TenDanhMuc || "Chưa phân loại")}</td>
-
-                <td class="fw-semibold text-primary">
-                    ${formatPrice(food.Gia)}
-                </td>
-
-                <td>${statusHTML}</td>
-
-                <td>
-                    <a
-                        href="/foods/edit/${encodeURIComponent(food.MaMonAn)}"
-                        class="btn btn-sm btn-outline-primary"
-                    >
-                        Sửa
-                    </a>
-                </td>
-            `;
-
-            foodTableBody.appendChild(row);
-        });
-
-        if (resultCount) {
-            resultCount.textContent =
-                `Đang hiển thị ${foods.length} / ${allFoods.length} món ăn`;
-        }
-    }
-
-    // Tìm kiếm và lọc món ăn
-    function filterFoods() {
-        const keyword = foodSearch
-            ? foodSearch.value.trim().toLowerCase()
-            : "";
-
-        const selectedCategory = categoryFilter
-            ? categoryFilter.value
-            : "";
-
-        const selectedStatus = statusFilter
-            ? statusFilter.value
-            : "";
-
-        const filteredFoods = allFoods.filter(function (food) {
-            const searchText = [
-                food.MaMon,
-                food.TenMonAn,
-                food.TenDanhMuc
-            ].join(" ").toLowerCase();
-
-            const matchKeyword = searchText.includes(keyword);
-
-            const matchCategory = !selectedCategory ||
-                String(food.MaDanhMuc) === selectedCategory;
-
-            const available = isAvailable(food.ConKinhDoanh);
-
-            const matchStatus =
-                !selectedStatus ||
-                (selectedStatus === "available" && available) ||
-                (selectedStatus === "unavailable" && !available);
-
-            return matchKeyword && matchCategory && matchStatus;
-        });
-
-        renderFoods(filteredFoods);
-    }
-
-    // Tải danh sách món ăn từ SQL Server thông qua API
     async function loadFoods() {
-        foodTableBody.innerHTML = `
-            <tr>
-                <td colspan="6" class="text-center py-4">
-                    Đang tải dữ liệu món ăn...
-                </td>
-            </tr>
-        `;
+        if (!foodTableBody) return;
 
         try {
             const result = await apiRequest("/api/mon-an");
 
-            allFoods = Array.isArray(result.data) ? result.data : [];
+            allFoods = result.data || [];
 
             updateStatistics();
+            loadCategoryFilter();
             filterFoods();
 
         } catch (error) {
@@ -409,76 +179,234 @@ if (foodTableBody) {
             foodTableBody.innerHTML = `
                 <tr>
                     <td colspan="6" class="text-center text-danger py-4">
-                        Không tải được danh sách món ăn:
                         ${escapeHTML(error.message)}
                     </td>
                 </tr>
             `;
-
-            if (resultCount) {
-                resultCount.textContent = "Lỗi tải dữ liệu.";
-            }
         }
     }
 
-    // Gắn sự kiện tìm kiếm và lọc
-    if (foodSearch) {
-        foodSearch.addEventListener("input", filterFoods);
-    }
+    function updateStatistics() {
+        const available = allFoods.filter(food =>
+            isActive(food.ConKinhDoanh)
+        ).length;
 
-    if (categoryFilter) {
-        categoryFilter.addEventListener("change", filterFoods);
-    }
+        if (totalFoods) {
+            totalFoods.textContent = allFoods.length;
+        }
 
-    if (statusFilter) {
-        statusFilter.addEventListener("change", filterFoods);
-    }
+        if (availableFoods) {
+            availableFoods.textContent = available;
+        }
 
-    // Tải danh mục và món ăn
-    async function initializeFoodPage() {
-        const categories = await loadCategories(categoryFilter, true);
+        if (unavailableFoods) {
+            unavailableFoods.textContent = allFoods.length - available;
+        }
 
         if (totalCategories) {
-            totalCategories.textContent = (categories || []).filter(
-                category => category.TrangThai !== false &&
-                    Number(category.TrangThai) !== 0
-            ).length;
+            totalCategories.textContent = allCategories.length;
         }
-
-        await loadFoods();
     }
 
-    initializeFoodPage();
-}
+    function loadCategoryFilter() {
+        if (!categoryFilter) return;
 
-// =====================================
-// THÊM MÓN ĂN
-// =====================================
-const addFoodForm = document.getElementById("addFoodForm");
+        const selected = categoryFilter.value;
 
-if (addFoodForm) {
-    const categorySelect = document.getElementById("foodCategory");
-    const imageInput = document.getElementById("foodImage");
-    const imagePreview = document.getElementById("imagePreview");
-    const removeImageButton = document.getElementById("removeImage");
-    const saveButton = document.getElementById("saveFoodButton");
+        categoryFilter.replaceChildren();
 
-    let imageData = null;
+        const first = document.createElement("option");
+        first.value = "";
+        first.textContent = "Tất cả danh mục";
+        categoryFilter.appendChild(first);
 
-    loadCategories(categorySelect);
+        allCategories.forEach(category => {
+            const option = document.createElement("option");
 
-    // Xem trước ảnh
-    if (imageInput) {
-        imageInput.addEventListener("change", function () {
-            const file = imageInput.files[0];
+            option.value = category.MaDanhMuc;
+            option.textContent = category.TenDanhMuc;
+
+            categoryFilter.appendChild(option);
+        });
+
+        categoryFilter.value = selected;
+    }
+
+    function renderFoods(foods) {
+        if (!foodTableBody) return;
+
+        foodTableBody.replaceChildren();
+
+        if (foods.length === 0) {
+            const row = document.createElement("tr");
+            const cell = document.createElement("td");
+
+            cell.colSpan = 6;
+            cell.className = "text-center py-4";
+            cell.textContent = "Không tìm thấy món ăn phù hợp.";
+
+            row.appendChild(cell);
+            foodTableBody.appendChild(row);
+        }
+
+        foods.forEach(food => {
+            const row = document.createElement("tr");
+
+            const values = [
+                food.MaMon || "",
+                food.TenMonAn || "",
+                food.TenDanhMuc || "",
+                currencyFormatter.format(Number(food.Gia) || 0)
+            ];
+
+            values.forEach(value => {
+                const cell = document.createElement("td");
+                cell.textContent = value;
+                row.appendChild(cell);
+            });
+
+            const statusCell = document.createElement("td");
+            const badge = document.createElement("span");
+
+            const active = isActive(food.ConKinhDoanh);
+
+            badge.className = active
+                ? "badge bg-success"
+                : "badge bg-danger";
+
+            badge.textContent = active
+                ? "Đang phục vụ"
+                : "Ngừng phục vụ";
+
+            statusCell.appendChild(badge);
+            row.appendChild(statusCell);
+
+            const actionCell = document.createElement("td");
+            if (["admin", "manager"].includes(
+                String(getUser()?.VaiTro || "").toLowerCase()
+            )) {
+                const editLink = document.createElement("a");
+                editLink.href = `/foods/edit/${food.MaMonAn}`;
+                editLink.className = "btn btn-sm btn-outline-primary";
+                editLink.textContent = "Sửa";
+                actionCell.appendChild(editLink);
+            }
+            row.appendChild(actionCell);
+
+            foodTableBody.appendChild(row);
+        });
+
+        if (resultCount) {
+            resultCount.textContent =
+                `Hiển thị ${foods.length} / ${allFoods.length} món ăn`;
+        }
+    }
+
+    function filterFoods() {
+        const keyword = foodSearch?.value.trim().toLowerCase() || "";
+        const category = categoryFilter?.value || "";
+        const status = statusFilter?.value || "";
+
+        const filtered = allFoods.filter(food => {
+            const name = (food.TenMonAn || "").toLowerCase();
+            const code = (food.MaMon || "").toLowerCase();
+
+            const matchesName =
+                name.includes(keyword) || code.includes(keyword);
+
+            const matchesCategory =
+                !category || String(food.MaDanhMuc) === category;
+
+            const active = isActive(food.ConKinhDoanh);
+
+            const matchesStatus =
+                !status ||
+                (status === "available" && active) ||
+                (status === "unavailable" && !active);
+
+            return matchesName && matchesCategory && matchesStatus;
+        });
+
+        renderFoods(filtered);
+    }
+
+    foodSearch?.addEventListener("input", filterFoods);
+    categoryFilter?.addEventListener("change", filterFoods);
+    statusFilter?.addEventListener("change", filterFoods);
+
+        // ==========================================
+    // 3. DANH MUC MON AN
+    // ==========================================
+
+    async function fetchCategories() {
+        try {
+            const result = await apiRequest(
+                "/api/danh-muc?trang_thai=true"
+            );
+
+            allCategories = result.data || [];
+
+            updateStatistics();
+            loadCategoryFilter();
+
+            const addCategory = document.getElementById("foodCategory");
+            const editForm = document.getElementById("editFoodForm");
+
+            if (addCategory && !editForm) {
+                loadCategories(addCategory);
+            }
+
+        } catch (error) {
+            console.error("Lỗi tải danh mục:", error);
+        }
+    }
+
+    function loadCategories(selectElement, selectedId = "") {
+        if (!selectElement) return;
+
+        selectElement.replaceChildren();
+
+        const placeholder = document.createElement("option");
+        placeholder.value = "";
+        placeholder.textContent = "Chọn danh mục";
+        selectElement.appendChild(placeholder);
+
+        allCategories.forEach(category => {
+            const option = document.createElement("option");
+
+            option.value = category.MaDanhMuc;
+            option.textContent = category.TenDanhMuc;
+
+            selectElement.appendChild(option);
+        });
+
+        if (selectedId !== "") {
+            selectElement.value = String(selectedId);
+        }
+    }
+
+
+    // ==========================================
+    // 4. XEM TRUOC ANH MON AN
+    // ==========================================
+
+    function setupImagePreview(inputId, previewId, removeId) {
+        const input = document.getElementById(inputId);
+        const preview = document.getElementById(previewId);
+        const removeButton = document.getElementById(removeId);
+
+        if (!input || !preview) return;
+
+        let currentObjectURL = null;
+
+        const placeholder = preview.parentElement?.querySelector(
+            ".image-preview-placeholder"
+        );
+
+        input.addEventListener("change", function () {
+            const file = input.files?.[0];
 
             if (!file) return;
-
-            if (file.size > 5 * 1024 * 1024) {
-                alert("Ảnh không được vượt quá 5MB.");
-                imageInput.value = "";
-                return;
-            }
 
             const allowedTypes = [
                 "image/jpeg",
@@ -487,74 +415,125 @@ if (addFoodForm) {
             ];
 
             if (!allowedTypes.includes(file.type)) {
-                alert("Chỉ chấp nhận ảnh JPG, PNG hoặc WEBP.");
-                imageInput.value = "";
+                alert("Vui lòng chọn ảnh JPG, PNG hoặc WEBP.");
+
+                input.value = "";
                 return;
             }
 
-            const reader = new FileReader();
+            if (file.size > 5 * 1024 * 1024) {
+                alert("Ảnh không được vượt quá 5MB.");
 
-            reader.onload = function (event) {
-                imageData = event.target.result;
-
-                if (imagePreview) {
-                    imagePreview.src = imageData;
-                    imagePreview.style.display = "block";
-                }
-
-                if (removeImageButton) {
-                    removeImageButton.style.display = "inline-block";
-                }
-            };
-
-            reader.readAsDataURL(file);
-        });
-    }
-
-    // Xóa ảnh
-    if (removeImageButton) {
-        removeImageButton.addEventListener("click", function () {
-            imageData = null;
-
-            if (imageInput) imageInput.value = "";
-
-            if (imagePreview) {
-                imagePreview.src = "";
-                imagePreview.style.display = "none";
+                input.value = "";
+                return;
             }
 
-            removeImageButton.style.display = "none";
+            if (currentObjectURL) {
+                URL.revokeObjectURL(currentObjectURL);
+            }
+
+            currentObjectURL = URL.createObjectURL(file);
+
+            preview.src = currentObjectURL;
+            preview.style.display = "block";
+
+            if (removeButton) {
+                removeButton.hidden = false;
+                removeButton.style.display = "";
+            }
+
+            if (placeholder) {
+                placeholder.style.display = "none";
+            }
+        });
+
+        removeButton?.addEventListener("click", function () {
+            input.value = "";
+
+            if (currentObjectURL) {
+                URL.revokeObjectURL(currentObjectURL);
+                currentObjectURL = null;
+            }
+
+            preview.removeAttribute("src");
+            preview.style.display = "none";
+
+            if (removeButton) {
+                removeButton.hidden = true;
+                removeButton.style.display = "none";
+            }
+
+            if (placeholder) {
+                placeholder.style.display = "flex";
+            }
         });
     }
 
-    // Gửi dữ liệu thêm món ăn
-    addFoodForm.addEventListener("submit", async function (event) {
+    setupImagePreview(
+        "foodImage",
+        "imagePreview",
+        "removeImage"
+    );
+
+    setupImagePreview(
+        "editFoodImage",
+        "editImagePreview",
+        "removeEditImage"
+    );
+
+
+    // ==========================================
+    // 5. THEM MON AN
+    // ==========================================
+
+    const addFoodForm = document.getElementById("addFoodForm");
+
+    addFoodForm?.addEventListener("submit", async function (event) {
         event.preventDefault();
 
-        const maMon = document.getElementById("foodCode").value.trim();
-        const tenMonAn = document.getElementById("foodName").value.trim();
-        const maDanhMuc = categorySelect.value;
-        const gia = Number(document.getElementById("foodPrice").value);
-        const moTa = document.getElementById("foodDescription").value.trim();
+        const code = document.getElementById("foodCode")?.value.trim();
+        const name = document.getElementById("foodName")?.value.trim();
+        const category = document.getElementById("foodCategory")?.value;
+        const price = Number(
+            document.getElementById("foodPrice")?.value
+        );
+        const description =
+            document.getElementById("foodDescription")?.value.trim() || "";
 
-        if (!maMon || !tenMonAn || !maDanhMuc || !gia || gia <= 0) {
-            alert("Vui lòng nhập đầy đủ thông tin hợp lệ.");
+        const saveButton = document.getElementById("saveFoodButton");
+
+        if (!code || !name || !category || !price || price <= 0) {
+            alert("Vui lòng nhập đầy đủ thông tin món ăn hợp lệ.");
+            return;
+        }
+
+        if (!getToken()) {
+            alert("Vui lòng đăng nhập trước khi thêm món ăn.");
+            window.location.href = "/login";
             return;
         }
 
         const payload = {
-            MaMon: maMon,
-            TenMonAn: tenMonAn,
-            MaDanhMuc: Number(maDanhMuc),
-            Gia: gia,
-            MoTa: moTa,
-            HinhAnh: imageData,
-            ConKinhDoanh: true
+            MaMon: code,
+            TenMonAn: name,
+            MaDanhMuc: Number(category),
+            Gia: price,
+            MoTa: description,
+            HinhAnh: null
         };
 
         try {
-            saveButton.disabled = true;
-            saveButton.textContent = "Đang lưu...";
+            if (saveButton) {
+                saveButton.disabled = true;
+                saveButton.textContent = "Đang lưu...";
+            }
+
+            const imageFile =
+                document.getElementById("foodImage")?.files?.[0];
+
+            if (imageFile) {
+                payload.HinhAnh = await uploadImage(imageFile);
+            }
 
             await apiRequest("/api/mon-an", {
                 method: "POST",
@@ -565,17 +544,340 @@ if (addFoodForm) {
             window.location.href = "/foods";
 
         } catch (error) {
-            alert(error.message);
+            alert("Không thể thêm món ăn: " + error.message);
+
         } finally {
-            saveButton.disabled = false;
-            saveButton.textContent = "Lưu món ăn";
+            if (saveButton) {
+                saveButton.disabled = false;
+                saveButton.textContent = "Lưu món ăn";
+            }
         }
     });
-}
 
-// =====================================
-// KHỞI TẠO
-// =====================================
-document.addEventListener("DOMContentLoaded", function () {
-    hienThiNguoiDung();
+
+    // ==========================================
+    // 6. SUA MON AN
+    // ==========================================
+
+    const editFoodForm = document.getElementById("editFoodForm");
+
+    if (editFoodForm) {
+        const pathParts = window.location.pathname.split("/");
+        const foodId = decodeURIComponent(pathParts[pathParts.length - 1]);
+
+        let currentImageURL = "";
+
+        async function loadFoodForEdit() {
+            try {
+                const [foodResult] = await Promise.all([
+                    apiRequest(`/api/mon-an/${foodId}`),
+                    fetchCategories()
+                ]);
+
+                const food = foodResult.data;
+
+                if (!food) {
+                    alert("Không tìm thấy món ăn.");
+                    window.location.href = "/foods";
+                    return;
+                }
+
+                document.getElementById("foodCode").value =
+                    food.MaMon || "";
+
+                document.getElementById("foodName").value =
+                    food.TenMonAn || "";
+
+                document.getElementById("foodPrice").value =
+                    food.Gia || "";
+
+                document.getElementById("foodDescription").value =
+                    food.MoTa || "";
+
+                loadCategories(
+                    document.getElementById("foodCategory"),
+                    food.MaDanhMuc
+                );
+
+                const statusInput = document.getElementById("foodStatus");
+
+                if (statusInput) {
+                    statusInput.value = isActive(food.ConKinhDoanh)
+                        ? "1"
+                        : "0";
+                }
+
+                currentImageURL = food.HinhAnh || "";
+
+                const preview = document.getElementById("editImagePreview");
+
+                if (preview && currentImageURL) {
+                    preview.src = currentImageURL;
+                    preview.style.display = "block";
+
+                    const placeholder = preview.parentElement?.querySelector(
+                        ".image-preview-placeholder"
+                    );
+
+                    if (placeholder) {
+                        placeholder.style.display = "none";
+                    }
+                }
+
+            } catch (error) {
+                console.error("Lỗi tải món ăn:", error);
+                alert("Không thể tải thông tin món ăn: " + error.message);
+            }
+        }
+
+        editFoodForm.addEventListener("submit", async function (event) {
+            event.preventDefault();
+
+            const name = document.getElementById("foodName")?.value.trim();
+            const category = document.getElementById("foodCategory")?.value;
+            const price = Number(
+                document.getElementById("foodPrice")?.value
+            );
+            const description =
+                document.getElementById("foodDescription")?.value.trim() || "";
+
+            if (!name || !category || !price || price <= 0) {
+                alert("Vui lòng nhập đầy đủ thông tin hợp lệ.");
+                return;
+            }
+
+            const payload = {
+                TenMonAn: name,
+                MaDanhMuc: Number(category),
+                Gia: price,
+                MoTa: description,
+                HinhAnh: currentImageURL,
+                ConKinhDoanh:
+                    document.getElementById("foodStatus")?.value ?? "1"
+            };
+
+            try {
+                const imageFile =
+                    document.getElementById("editFoodImage")?.files?.[0];
+
+                if (imageFile) {
+                    payload.HinhAnh = await uploadImage(imageFile);
+                }
+
+                await apiRequest(`/api/mon-an/${foodId}`, {
+                    method: "PUT",
+                    body: JSON.stringify(payload)
+                });
+
+                alert("Cập nhật món ăn thành công!");
+                window.location.href = "/foods";
+
+            } catch (error) {
+                alert("Không thể cập nhật món ăn: " + error.message);
+            }
+        });
+
+        loadFoodForEdit();
+    }
+        // ==========================================
+    // 7. DANG NHAP
+    // ==========================================
+
+    const loginForm = document.getElementById("loginForm");
+
+    loginForm?.addEventListener("submit", async function (event) {
+        event.preventDefault();
+
+        const username =
+            document.getElementById("username")?.value.trim() ||
+            document.getElementById("TenDangNhap")?.value.trim();
+
+        const password =
+            document.getElementById("password")?.value ||
+            document.getElementById("MatKhau")?.value;
+
+        const loginMessage = document.getElementById("loginMessage");
+        const submitButton = loginForm.querySelector(
+            'button[type="submit"]'
+        );
+
+        if (!username || !password) {
+            if (loginMessage) {
+                loginMessage.textContent =
+                    "Vui lòng nhập tên đăng nhập và mật khẩu.";
+            } else {
+                alert("Vui lòng nhập tên đăng nhập và mật khẩu.");
+            }
+
+            return;
+        }
+
+        try {
+            if (submitButton) {
+                submitButton.disabled = true;
+                submitButton.textContent = "Đang đăng nhập...";
+            }
+
+            const response = await fetch("/api/dang-nhap", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    TenDangNhap: username,
+                    MatKhau: password
+                })
+            });
+
+            const result = await response.json();
+
+            if (!response.ok || result.status !== "success") {
+                throw new Error(
+                    result.message || "Tên đăng nhập hoặc mật khẩu không đúng."
+                );
+            }
+
+            if (!result.token) {
+                throw new Error("Máy chủ không trả về mã đăng nhập.");
+            }
+
+            localStorage.setItem(TOKEN_KEY, result.token);
+            localStorage.setItem(
+                USER_KEY,
+                JSON.stringify(result.data || {})
+            );
+
+            window.location.href = "/";
+
+        } catch (error) {
+            if (loginMessage) {
+                loginMessage.textContent = error.message;
+            } else {
+                alert(error.message);
+            }
+
+        } finally {
+            if (submitButton) {
+                submitButton.disabled = false;
+                submitButton.textContent = "Đăng nhập";
+            }
+        }
+    });
+
+
+    // ==========================================
+    // 8. DANG XUAT
+    // ==========================================
+
+    document.querySelectorAll("[data-logout]").forEach(button => {
+        button.addEventListener("click", function (event) {
+            event.preventDefault();
+
+            const confirmed = confirm("Bạn có chắc chắn muốn đăng xuất?");
+
+            if (!confirmed) return;
+
+            localStorage.removeItem(TOKEN_KEY);
+            localStorage.removeItem(USER_KEY);
+
+            window.location.href = "/login";
+        });
+    });
+
+
+    // ==========================================
+    // 9. HIEN THI THONG TIN NGUOI DUNG
+    // ==========================================
+
+    const currentUser = getUser();
+    const roleLabels = {
+        admin: "Admin",
+        manager: "Quản lý",
+        nhanvien: "Nhân viên",
+        user: "Nhân viên"
+    };
+
+    document.querySelectorAll("[data-roles]").forEach(element => {
+        const allowed = element.dataset.roles.split(",").map(value => value.trim());
+        const role = String(currentUser?.VaiTro || "").toLowerCase();
+        if (!allowed.some(value => value.toLowerCase() === role)) {
+            element.hidden = true;
+        }
+    });
+
+    document.querySelectorAll("[data-user-name]").forEach(element => {
+        element.textContent =
+            currentUser?.HoTen ||
+            currentUser?.TenDangNhap ||
+            "Người dùng";
+    });
+
+    document.querySelectorAll("[data-user-role]").forEach(element => {
+        const role = String(currentUser?.VaiTro || "").toLowerCase();
+        element.textContent = roleLabels[role] || "Nhân viên";
+    });
+
+
+    // ==========================================
+    // 10. THONG BAO CHUC NANG CHUA HO TRO
+    // ==========================================
+
+    document.querySelectorAll("[data-coming-soon]").forEach(button => {
+        button.addEventListener("click", function (event) {
+            event.preventDefault();
+            alert("Chức năng này đang được phát triển.");
+        });
+    });
+
+
+    // ==========================================
+    // 11. TAI THONG KE DASHBOARD
+    // ==========================================
+
+    const dashboardPage =
+        document.getElementById("totalFoods") &&
+        !foodTableBody;
+
+    async function loadDashboardStats() {
+        if (!dashboardPage) return;
+
+        try {
+            const [foodResult, categoryResult] = await Promise.all([
+                apiRequest("/api/mon-an"),
+                apiRequest("/api/danh-muc?trang_thai=true")
+            ]);
+
+            allFoods = foodResult.data || [];
+            allCategories = categoryResult.data || [];
+
+            updateStatistics();
+
+        } catch (error) {
+            console.error(
+                "Lỗi tải thống kê Dashboard:",
+                error
+            );
+        }
+    }
+
+
+    // ==========================================
+    // 12. KHOI TAO DU LIEU THEO TUNG TRANG
+    // ==========================================
+
+    const hasCategorySelect =
+        document.getElementById("foodCategory");
+
+    if (foodTableBody || hasCategorySelect || editFoodForm) {
+        await fetchCategories();
+    }
+
+    if (foodTableBody) {
+        await loadFoods();
+    }
+
+    if (dashboardPage) {
+        await loadDashboardStats();
+    }
+
 });

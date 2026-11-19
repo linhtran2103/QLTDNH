@@ -1,0 +1,163 @@
+{% extends "base.html" %}
+
+{% block title %}Quản lý tài khoản | RestoMenu{% endblock %}
+
+{% block content %}
+{% include "_navbar.html" %}
+<main class="container py-4">
+    <div class="mb-4">
+        <h1 class="h3 fw-bold mb-1">Tài khoản nhân sự</h1>
+        <p class="text-muted mb-0">Chỉ tạo tài khoản Admin, Quản lý hoặc Nhân viên.</p>
+    </div>
+    <div id="usersMessage" class="alert d-none" role="alert"></div>
+    <div class="row g-4">
+        <section class="col-lg-4">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h2 class="h5 fw-bold mb-3">Tạo tài khoản</h2>
+                    <form id="createUserForm">
+                        <label class="form-label" for="userLogin">Tên đăng nhập</label>
+                        <input id="userLogin" class="form-control mb-3" maxlength="50" required>
+                        <label class="form-label" for="userFullName">Họ tên</label>
+                        <input id="userFullName" class="form-control mb-3" maxlength="100" required>
+                        <label class="form-label" for="userRole">Vai trò</label>
+                        <select id="userRole" class="form-select mb-3" required>
+                            <option value="manager">Quản lý</option>
+                            <option value="NhanVien">Nhân viên</option>
+                            <option value="admin">Admin</option>
+                        </select>
+                        <label class="form-label" for="userPassword">Mật khẩu</label>
+                        <input id="userPassword" type="password" class="form-control mb-3"
+                            minlength="6" autocomplete="new-password" required>
+                        <button class="btn btn-primary w-100" type="submit">Tạo tài khoản</button>
+                    </form>
+                </div>
+            </div>
+        </section>
+        <section class="col-lg-8">
+            <div class="card shadow-sm">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <h2 class="h5 fw-bold mb-0">Danh sách tài khoản</h2>
+                    <button class="btn btn-outline-secondary btn-sm" id="refreshUsers">Làm mới</button>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr><th>Tên đăng nhập</th><th>Họ tên</th><th>Vai trò</th><th>Trạng thái</th><th></th></tr>
+                        </thead>
+                        <tbody id="usersList">
+                            <tr><td colspan="5" class="text-center py-4">Đang tải...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+    </div>
+</main>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    const token = localStorage.getItem("qltdnh_token");
+    const tbody = document.getElementById("usersList");
+    const message = document.getElementById("usersMessage");
+    const roleLabels = { admin: "Admin", manager: "Quản lý", NhanVien: "Nhân viên" };
+    const escapeHTML = value => String(value ?? "").replace(/[&<>"']/g, char => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;"
+    })[char]);
+
+    function showMessage(text, success = false) {
+        message.className = `alert alert-${success ? "success" : "danger"}`;
+        message.textContent = text;
+        message.classList.remove("d-none");
+    }
+
+    async function request(url, options = {}) {
+        const response = await fetch(url, {
+            ...options,
+            headers: {
+                Authorization: `Bearer ${token}`,
+                ...(options.body ? { "Content-Type": "application/json" } : {}),
+                ...(options.headers || {})
+            }
+        });
+        const result = await response.json();
+        if (!response.ok || result.status !== "success") {
+            throw new Error(result.message || "Yêu cầu không thành công.");
+        }
+        return result;
+    }
+
+    async function loadUsers() {
+        try {
+            const result = await request("/api/nguoi-dung");
+            tbody.replaceChildren();
+            result.data.forEach(user => {
+                const row = document.createElement("tr");
+                const active = user.TrangThai === true || user.TrangThai === 1;
+                row.innerHTML = `
+                    <td>${escapeHTML(user.TenDangNhap)}</td>
+                    <td>${escapeHTML(user.HoTen)}</td>
+                    <td>${roleLabels[user.VaiTro] || escapeHTML(user.VaiTro)}</td>
+                    <td>${active ? "Đang hoạt động" : "Đã khóa"}</td>
+                    <td><button class="btn btn-sm ${active ? "btn-outline-danger" : "btn-outline-success"}"
+                        data-id="${user.MaNguoiDung}" data-active="${active}">
+                        ${active ? "Khóa" : "Mở khóa"}
+                    </button></td>`;
+                const button = row.querySelector("button");
+                button.addEventListener("click", async () => {
+                    if (button.dataset.active === "true" &&
+                        !confirm(`Khóa tài khoản ${user.TenDangNhap}?`)) return;
+                    button.disabled = true;
+                    try {
+                        const url = button.dataset.active === "true"
+                            ? `/api/nguoi-dung/${user.MaNguoiDung}`
+                            : `/api/nguoi-dung/${user.MaNguoiDung}/mo-khoa`;
+                        await request(url, { method: button.dataset.active === "true" ? "DELETE" : "PUT" });
+                        await loadUsers();
+                    } catch (error) {
+                        showMessage(error.message);
+                        button.disabled = false;
+                    }
+                });
+                tbody.appendChild(row);
+            });
+            if (!result.data.length) {
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4">Chưa có tài khoản.</td></tr>';
+            }
+        } catch (error) {
+            tbody.innerHTML = `<tr><td colspan="5" class="text-danger p-3">${escapeHTML(error.message)}</td></tr>`;
+        }
+    }
+
+    document.getElementById("createUserForm").addEventListener("submit", async event => {
+        event.preventDefault();
+        const form = event.currentTarget;
+        const button = form.querySelector("button[type=submit]");
+        button.disabled = true;
+        try {
+            const result = await request("/api/nguoi-dung", {
+                method: "POST",
+                body: JSON.stringify({
+                    TenDangNhap: document.getElementById("userLogin").value.trim(),
+                    HoTen: document.getElementById("userFullName").value.trim(),
+                    VaiTro: document.getElementById("userRole").value,
+                    MatKhau: document.getElementById("userPassword").value
+                })
+            });
+            form.reset();
+            showMessage(result.message, true);
+            await loadUsers();
+        } catch (error) {
+            showMessage(error.message);
+        } finally {
+            button.disabled = false;
+        }
+    });
+
+    document.getElementById("refreshUsers").addEventListener("click", loadUsers);
+    loadUsers();
+});
+</script>
+{% endblock %}

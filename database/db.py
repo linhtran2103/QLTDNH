@@ -1,4 +1,5 @@
 import os
+from contextlib import contextmanager
 from pathlib import Path
 
 import pyodbc
@@ -51,6 +52,23 @@ def get_connection():
         )
 
     return pyodbc.connect(connection_string, timeout=5)
+
+
+@contextmanager
+def db_cursor(commit=False):
+    """Mở cursor, commit khi được yêu cầu và luôn đóng tài nguyên."""
+    conn = get_connection()
+    cursor = None
+    try:
+        cursor = conn.cursor()
+        yield cursor
+        if commit:
+            conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        dong_ket_noi(cursor, conn)
 
 
 # =========================================================
