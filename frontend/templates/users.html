@@ -1,52 +1,95 @@
+
 {% extends "base.html" %}
 
 {% block title %}Quản lý tài khoản | RestoMenu{% endblock %}
 
 {% block content %}
 {% include "_navbar.html" %}
+
 <main class="container py-4">
     <div class="mb-4">
         <h1 class="h3 fw-bold mb-1">Tài khoản nhân sự</h1>
-        <p class="text-muted mb-0">Chỉ tạo tài khoản Admin, Quản lý hoặc Nhân viên.</p>
+        <p class="text-muted mb-0">
+            Chỉ tạo tài khoản Admin, Quản lý hoặc Nhân viên.
+        </p>
     </div>
+
     <div id="usersMessage" class="alert d-none" role="alert"></div>
+
     <div class="row g-4">
         <section class="col-lg-4">
             <div class="card shadow-sm">
                 <div class="card-body">
                     <h2 class="h5 fw-bold mb-3">Tạo tài khoản</h2>
+
                     <form id="createUserForm">
-                        <label class="form-label" for="userLogin">Tên đăng nhập</label>
-                        <input id="userLogin" class="form-control mb-3" maxlength="50" required>
-                        <label class="form-label" for="userFullName">Họ tên</label>
-                        <input id="userFullName" class="form-control mb-3" maxlength="100" required>
-                        <label class="form-label" for="userRole">Vai trò</label>
+                        <label class="form-label" for="userLogin">
+                            Tên đăng nhập
+                        </label>
+                        <input id="userLogin" class="form-control mb-3"
+                            maxlength="50" required>
+
+                        <label class="form-label" for="userFullName">
+                            Họ tên
+                        </label>
+                        <input id="userFullName" class="form-control mb-3"
+                            maxlength="100" required>
+
+                        <label class="form-label" for="userRole">
+                            Vai trò
+                        </label>
                         <select id="userRole" class="form-select mb-3" required>
                             <option value="manager">Quản lý</option>
                             <option value="NhanVien">Nhân viên</option>
                             <option value="admin">Admin</option>
                         </select>
-                        <label class="form-label" for="userPassword">Mật khẩu</label>
-                        <input id="userPassword" type="password" class="form-control mb-3"
-                            minlength="6" autocomplete="new-password" required>
-                        <button class="btn btn-primary w-100" type="submit">Tạo tài khoản</button>
+
+                        <label class="form-label" for="userPassword">
+                            Mật khẩu
+                        </label>
+                        <input id="userPassword" type="password"
+                            class="form-control mb-3"
+                            minlength="6"
+                            autocomplete="new-password"
+                            required>
+
+                        <button class="btn btn-primary w-100" type="submit">
+                            Tạo tài khoản
+                        </button>
                     </form>
                 </div>
             </div>
         </section>
+
         <section class="col-lg-8">
             <div class="card shadow-sm">
                 <div class="card-header bg-white d-flex justify-content-between align-items-center">
                     <h2 class="h5 fw-bold mb-0">Danh sách tài khoản</h2>
-                    <button class="btn btn-outline-secondary btn-sm" id="refreshUsers">Làm mới</button>
+
+                    <button class="btn btn-outline-secondary btn-sm"
+                        id="refreshUsers">
+                        Làm mới
+                    </button>
                 </div>
+
                 <div class="table-responsive">
                     <table class="table table-hover align-middle mb-0">
                         <thead class="table-light">
-                            <tr><th>Tên đăng nhập</th><th>Họ tên</th><th>Vai trò</th><th>Trạng thái</th><th></th></tr>
+                            <tr>
+                                <th>Tên đăng nhập</th>
+                                <th>Họ tên</th>
+                                <th>Vai trò</th>
+                                <th>Trạng thái</th>
+                                <th>Thao tác</th>
+                            </tr>
                         </thead>
+
                         <tbody id="usersList">
-                            <tr><td colspan="5" class="text-center py-4">Đang tải...</td></tr>
+                            <tr>
+                                <td colspan="5" class="text-center py-4">
+                                    Đang tải...
+                                </td>
+                            </tr>
                         </tbody>
                     </table>
                 </div>
@@ -59,115 +102,282 @@
 {% block extra_js %}
 <script>
 document.addEventListener("DOMContentLoaded", () => {
+
     const token = localStorage.getItem("qltdnh_token");
     const tbody = document.getElementById("usersList");
     const message = document.getElementById("usersMessage");
-    const roleLabels = { admin: "Admin", manager: "Quản lý", NhanVien: "Nhân viên" };
+
+    const roleLabels = {
+        admin: "Admin",
+        manager: "Quản lý",
+        NhanVien: "Nhân viên",
+        nhan_vien: "Nhân viên",
+        employee: "Nhân viên",
+        staff: "Nhân viên"
+    };
+
     const escapeHTML = value => String(value ?? "").replace(/[&<>"']/g, char => ({
-        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;"
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#039;"
     })[char]);
 
+    // Hiển thị thông báo
     function showMessage(text, success = false) {
         message.className = `alert alert-${success ? "success" : "danger"}`;
         message.textContent = text;
         message.classList.remove("d-none");
     }
 
+    // Gửi yêu cầu đến API
     async function request(url, options = {}) {
+
         const response = await fetch(url, {
             ...options,
             headers: {
                 Authorization: `Bearer ${token}`,
-                ...(options.body ? { "Content-Type": "application/json" } : {}),
+                ...(options.body ? {
+                    "Content-Type": "application/json"
+                } : {}),
                 ...(options.headers || {})
             }
         });
+
         const result = await response.json();
+
         if (response.status === 401) {
             localStorage.removeItem("qltdnh_token");
             localStorage.removeItem("qltdnh_user");
-            showMessage("Phiên đăng nhập đã hết hạn. Đang chuyển đến trang đăng nhập...");
-            window.setTimeout(() => window.location.replace("/login"), 1200);
+
+            showMessage(
+                "Phiên đăng nhập đã hết hạn. Đang chuyển đến trang đăng nhập..."
+            );
+
+            window.setTimeout(() => {
+                window.location.replace("/login");
+            }, 1200);
+
             throw new Error("Vui lòng đăng nhập lại bằng tài khoản Admin.");
         }
+
         if (response.status === 403) {
-            throw new Error("Chỉ Admin mới được quản lý tài khoản nhân sự.");
+            throw new Error(
+                "Chỉ Admin mới được quản lý tài khoản nhân sự."
+            );
         }
+
         if (!response.ok || result.status !== "success") {
-            throw new Error(result.message || "Yêu cầu không thành công.");
+            throw new Error(
+                result.message || "Yêu cầu không thành công."
+            );
         }
+
         return result;
     }
 
+    // Tải danh sách tài khoản
     async function loadUsers() {
+
         try {
             const result = await request("/api/nguoi-dung");
+
             tbody.replaceChildren();
+
             result.data.forEach(user => {
+
                 const row = document.createElement("tr");
-                const active = user.TrangThai === true || user.TrangThai === 1;
+
+                const active =
+                    user.TrangThai === true ||
+                    user.TrangThai === 1;
+
                 row.innerHTML = `
                     <td>${escapeHTML(user.TenDangNhap)}</td>
+
                     <td>${escapeHTML(user.HoTen)}</td>
+
                     <td>${roleLabels[user.VaiTro] || escapeHTML(user.VaiTro)}</td>
-                    <td>${active ? "Đang hoạt động" : "Đã khóa"}</td>
-                    <td><button class="btn btn-sm ${active ? "btn-outline-danger" : "btn-outline-success"}"
-                        data-id="${user.MaNguoiDung}" data-active="${active}">
-                        ${active ? "Khóa" : "Mở khóa"}
-                    </button></td>`;
-                const button = row.querySelector("button");
-                button.addEventListener("click", async () => {
-                    if (button.dataset.active === "true" &&
-                        !confirm(`Khóa tài khoản ${user.TenDangNhap}?`)) return;
-                    button.disabled = true;
+
+                    <td>
+                        <span class="badge ${active ? "bg-success" : "bg-secondary"}">
+                            ${active ? "Đang hoạt động" : "Đã khóa"}
+                        </span>
+                    </td>
+
+                    <td>
+                        <div class="d-flex gap-2 flex-wrap">
+
+                            <button
+                                class="btn btn-sm ${active ? "btn-outline-danger" : "btn-outline-success"}"
+                                data-action="toggle"
+                                data-active="${active}">
+                                ${active ? "Khóa" : "Mở khóa"}
+                            </button>
+
+                            <button
+                                class="btn btn-sm btn-danger"
+                                data-action="delete">
+                                Xóa hẳn
+                            </button>
+
+                        </div>
+                    </td>
+                `;
+
+                // Nút khóa / mở khóa
+                const toggleButton = row.querySelector(
+                    '[data-action="toggle"]'
+                );
+
+                toggleButton.addEventListener("click", async () => {
+
+                    const isActive =
+                        toggleButton.dataset.active === "true";
+
+                    if (isActive &&
+                        !confirm(`Bạn có chắc muốn khóa tài khoản ${user.TenDangNhap}?`)) {
+                        return;
+                    }
+
+                    toggleButton.disabled = true;
+
                     try {
-                        const url = button.dataset.active === "true"
+
+                        const url = isActive
                             ? `/api/nguoi-dung/${user.MaNguoiDung}`
                             : `/api/nguoi-dung/${user.MaNguoiDung}/mo-khoa`;
-                        await request(url, { method: button.dataset.active === "true" ? "DELETE" : "PUT" });
+
+                        await request(url, {
+                            method: isActive ? "DELETE" : "PUT"
+                        });
+
+                        showMessage(
+                            isActive
+                                ? "Đã khóa tài khoản."
+                                : "Đã mở khóa tài khoản.",
+                            true
+                        );
+
                         await loadUsers();
+
                     } catch (error) {
                         showMessage(error.message);
-                        button.disabled = false;
+                        toggleButton.disabled = false;
                     }
                 });
+
+                // Nút xóa hẳn tài khoản
+                const deleteButton = row.querySelector(
+                    '[data-action="delete"]'
+                );
+
+                deleteButton.addEventListener("click", async () => {
+
+                    const confirmed = confirm(
+                        `CẢNH BÁO: Bạn có chắc chắn muốn XÓA HẲN tài khoản "${user.TenDangNhap}" không?\n\n` +
+                        "Tài khoản sẽ bị xóa khỏi hệ thống và không thể đăng nhập lại.\n" +
+                        "Dữ liệu đơn hàng và lịch sử liên quan sẽ được giữ lại.\n\n" +
+                        "Bạn có chắc chắn muốn tiếp tục?"
+                    );
+
+                    if (!confirmed) return;
+
+                    deleteButton.disabled = true;
+
+                    try {
+
+                        const result = await request(
+                            `/api/nguoi-dung/${user.MaNguoiDung}/xoa-han`,
+                            {
+                                method: "DELETE"
+                            }
+                        );
+
+                        showMessage(
+                            result.message || "Đã xóa hẳn tài khoản.",
+                            true
+                        );
+
+                        await loadUsers();
+
+                    } catch (error) {
+                        showMessage(error.message);
+                        deleteButton.disabled = false;
+                    }
+                });
+
                 tbody.appendChild(row);
             });
+
             if (!result.data.length) {
-                tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4">Chưa có tài khoản.</td></tr>';
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="text-center py-4">
+                            Chưa có tài khoản.
+                        </td>
+                    </tr>
+                `;
             }
+
         } catch (error) {
-            tbody.innerHTML = `<tr><td colspan="5" class="text-danger p-3">${escapeHTML(error.message)}</td></tr>`;
+
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="5" class="text-danger p-3">
+                        ${escapeHTML(error.message)}
+                    </td>
+                </tr>
+            `;
         }
     }
 
-    document.getElementById("createUserForm").addEventListener("submit", async event => {
-        event.preventDefault();
-        const form = event.currentTarget;
-        const button = form.querySelector("button[type=submit]");
-        button.disabled = true;
-        try {
-            const result = await request("/api/nguoi-dung", {
-                method: "POST",
-                body: JSON.stringify({
-                    TenDangNhap: document.getElementById("userLogin").value.trim(),
-                    HoTen: document.getElementById("userFullName").value.trim(),
-                    VaiTro: document.getElementById("userRole").value,
-                    MatKhau: document.getElementById("userPassword").value
-                })
-            });
-            form.reset();
-            showMessage(result.message, true);
-            await loadUsers();
-        } catch (error) {
-            showMessage(error.message);
-        } finally {
-            button.disabled = false;
-        }
-    });
+    // Tạo tài khoản mới
+    document.getElementById("createUserForm")
+        .addEventListener("submit", async event => {
 
-    document.getElementById("refreshUsers").addEventListener("click", loadUsers);
+            event.preventDefault();
+
+            const form = event.currentTarget;
+            const button = form.querySelector("button[type=submit]");
+
+            button.disabled = true;
+
+            try {
+
+                const result = await request("/api/nguoi-dung", {
+                    method: "POST",
+
+                    body: JSON.stringify({
+                        TenDangNhap: document.getElementById("userLogin").value.trim(),
+                        HoTen: document.getElementById("userFullName").value.trim(),
+                        VaiTro: document.getElementById("userRole").value,
+                        MatKhau: document.getElementById("userPassword").value
+                    })
+                });
+
+                form.reset();
+
+                showMessage(result.message, true);
+
+                await loadUsers();
+
+            } catch (error) {
+                showMessage(error.message);
+
+            } finally {
+                button.disabled = false;
+            }
+        });
+
+    // Làm mới danh sách
+    document.getElementById("refreshUsers")
+        .addEventListener("click", loadUsers);
+
+    // Tải danh sách khi mở trang
     loadUsers();
+
 });
 </script>
 {% endblock %}

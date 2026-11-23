@@ -1,3 +1,4 @@
+
 from flask import Blueprint, g
 from werkzeug.security import generate_password_hash
 
@@ -11,137 +12,371 @@ from backend.utils.validators import chuoi, ghi_nhat_ky, lay_json, ton_tai
 nguoi_dung_bp = Blueprint("nguoi_dung", __name__)
 
 
-# =====================================================
+# =========================================================
+# 1. LẤY DANH SÁCH NGƯỜI DÙNG
+# =========================================================
 
 @nguoi_dung_bp.route("/api/nguoi-dung", methods=["GET"])
 @chi_admin
 def danh_sach_nguoi_dung():
     with db_cursor() as cursor:
-        cursor.execute(
-            """
-            SELECT MaNguoiDung, TenDangNhap, HoTen, VaiTro, TrangThai, NgayTao
+        cursor.execute("""
+            SELECT
+                MaNguoiDung,
+                TenDangNhap,
+                HoTen,
+                VaiTro,
+                TrangThai,
+                NgayTao
             FROM NGUOI_DUNG
             WHERE LOWER(LTRIM(RTRIM(VaiTro))) IN
-                ('admin', 'manager', 'nhanvien', 'nhan_vien', N'nhân viên',
-                 'employee', 'staff', 'user')
+                (
+                    'admin',
+                    'manager',
+                    'nhanvien',
+                    'nhan_vien',
+                    N'nhân viên',
+                    'employee',
+                    'staff',
+                    'user'
+                )
             ORDER BY MaNguoiDung DESC
-            """
-        )
+        """)
+
         users = convert_to_json(cursor)
+
         for user in users:
-            user["VaiTro"] = chuan_hoa_vai_tro(user["VaiTro"]) or user["VaiTro"]
+            user["VaiTro"] = (
+                chuan_hoa_vai_tro(user["VaiTro"])
+                or user["VaiTro"]
+            )
+
         return thanh_cong(data=users)
 
+
+# =========================================================
+# 2. THÊM NGƯỜI DÙNG
+# =========================================================
 
 @nguoi_dung_bp.route("/api/nguoi-dung", methods=["POST"])
 @chi_admin
 def them_nguoi_dung():
     data = lay_json()
+
     ten_dang_nhap = chuoi(data.get("TenDangNhap"))
     mat_khau = data.get("MatKhau")
     ho_ten = chuoi(data.get("HoTen"))
+
     raw_role = chuoi(data.get("VaiTro"))
-    vai_tro = chuan_hoa_vai_tro(raw_role) if raw_role else VAI_TRO_MAC_DINH
+
+    vai_tro = (
+        chuan_hoa_vai_tro(raw_role)
+        if raw_role
+        else VAI_TRO_MAC_DINH
+    )
 
     if not ten_dang_nhap or not mat_khau or not ho_ten:
-        return that_bai("Vui lòng nhập đầy đủ thông tin người dùng")
+        return that_bai(
+            "Vui lòng nhập đầy đủ thông tin người dùng"
+        )
+
     if len(ten_dang_nhap) > 50:
-        return that_bai("Tên đăng nhập không được vượt quá 50 ký tự")
+        return that_bai(
+            "Tên đăng nhập không được vượt quá 50 ký tự"
+        )
+
     if len(str(mat_khau)) < 6:
-        return that_bai("Mật khẩu phải có ít nhất 6 ký tự")
+        return that_bai(
+            "Mật khẩu phải có ít nhất 6 ký tự"
+        )
+
     if not vai_tro or vai_tro not in VAI_TRO_HOP_LE:
-        return that_bai("Vai trò chỉ được là admin, manager hoặc NhanVien")
+        return that_bai(
+            "Vai trò chỉ được là admin, manager hoặc NhanVien"
+        )
 
     with db_cursor(commit=True) as cursor:
-        if ton_tai(cursor, "NGUOI_DUNG", "TenDangNhap", ten_dang_nhap):
+
+        if ton_tai(
+            cursor,
+            "NGUOI_DUNG",
+            "TenDangNhap",
+            ten_dang_nhap
+        ):
             return that_bai("Tên đăng nhập đã tồn tại")
 
-        cursor.execute(
-            """
+        cursor.execute("""
             INSERT INTO NGUOI_DUNG
-                (TenDangNhap, MatKhauHash, HoTen, VaiTro, TrangThai, NgayTao)
+                (
+                    TenDangNhap,
+                    MatKhauHash,
+                    HoTen,
+                    VaiTro,
+                    TrangThai,
+                    NgayTao
+                )
             VALUES (?, ?, ?, ?, 1, GETDATE())
-            """,
-            (ten_dang_nhap, generate_password_hash(str(mat_khau)),
-             ho_ten, vai_tro),
+        """, (
+            ten_dang_nhap,
+            generate_password_hash(str(mat_khau)),
+            ho_ten,
+            vai_tro
+        ))
+
+        ghi_nhat_ky(
+            cursor,
+            "Thêm",
+            "NGUOI_DUNG",
+            None,
+            f"Thêm tài khoản {ten_dang_nhap}"
         )
-        ghi_nhat_ky(cursor, "Thêm", "NGUOI_DUNG", None,
-                    f"Thêm tài khoản {ten_dang_nhap}")
 
-    return thanh_cong("Thêm người dùng thành công", status=201)
+    return thanh_cong(
+        "Thêm người dùng thành công",
+        status=201
+    )
 
 
-@nguoi_dung_bp.route("/api/nguoi-dung/<int:ma_nguoi_dung>", methods=["PUT"])
+# =========================================================
+# 3. SỬA THÔNG TIN NGƯỜI DÙNG
+# =========================================================
+
+@nguoi_dung_bp.route(
+    "/api/nguoi-dung/<int:ma_nguoi_dung>",
+    methods=["PUT"]
+)
 @chi_admin
 def sua_nguoi_dung(ma_nguoi_dung):
+
     if ma_nguoi_dung == g.ma_nguoi_dung:
-        return that_bai("Không thể tự chỉnh sửa tài khoản của mình tại đây")
+        return that_bai(
+            "Không thể tự chỉnh sửa tài khoản của mình tại đây"
+        )
 
     data = lay_json()
+
     ho_ten = chuoi(data.get("HoTen"))
     vai_tro = chuan_hoa_vai_tro(data.get("VaiTro"))
     mat_khau = data.get("MatKhau")
 
     if not ho_ten or not vai_tro:
-        return that_bai("Vui lòng nhập họ tên và vai trò hợp lệ")
+        return that_bai(
+            "Vui lòng nhập họ tên và vai trò hợp lệ"
+        )
+
     if vai_tro not in VAI_TRO_HOP_LE:
-        return that_bai("Vai trò chỉ được là admin, manager hoặc NhanVien")
+        return that_bai(
+            "Vai trò chỉ được là admin, manager hoặc NhanVien"
+        )
+
     if mat_khau and len(str(mat_khau)) < 6:
-        return that_bai("Mật khẩu phải có ít nhất 6 ký tự")
+        return that_bai(
+            "Mật khẩu phải có ít nhất 6 ký tự"
+        )
 
     with db_cursor(commit=True) as cursor:
+
+        cursor.execute("""
+            UPDATE NGUOI_DUNG
+            SET
+                HoTen = ?,
+                VaiTro = ?,
+                MatKhauHash = COALESCE(?, MatKhauHash)
+            WHERE MaNguoiDung = ?
+        """, (
+            ho_ten,
+            vai_tro,
+            generate_password_hash(str(mat_khau))
+            if mat_khau else None,
+            ma_nguoi_dung
+        ))
+
+        if cursor.rowcount == 0:
+            return that_bai(
+                "Không tìm thấy người dùng",
+                404
+            )
+
+        ghi_nhat_ky(
+            cursor,
+            "Cập nhật",
+            "NGUOI_DUNG",
+            ma_nguoi_dung
+        )
+
+    return thanh_cong(
+        "Cập nhật người dùng thành công"
+    )
+
+
+# =========================================================
+# 4. HÀM KHÓA / MỞ KHÓA NGƯỜI DÙNG
+# =========================================================
+
+def _doi_trang_thai_nguoi_dung(
+    ma_nguoi_dung,
+    trang_thai
+):
+    with db_cursor(commit=True) as cursor:
+
         cursor.execute(
             """
             UPDATE NGUOI_DUNG
-            SET HoTen = ?, VaiTro = ?, MatKhauHash = COALESCE(?, MatKhauHash)
+            SET TrangThai = ?
             WHERE MaNguoiDung = ?
+              AND TrangThai = ?
             """,
-            (ho_ten, vai_tro,
-             generate_password_hash(str(mat_khau)) if mat_khau else None,
-             ma_nguoi_dung),
+            (
+                trang_thai,
+                ma_nguoi_dung,
+                0 if trang_thai else 1
+            )
         )
-        if cursor.rowcount == 0:
-            return that_bai("Không tìm thấy người dùng", 404)
 
-        ghi_nhat_ky(cursor, "Cập nhật", "NGUOI_DUNG", ma_nguoi_dung)
-
-    return thanh_cong("Cập nhật người dùng thành công")
-
-
-def _doi_trang_thai_nguoi_dung(ma_nguoi_dung, trang_thai):
-    with db_cursor(commit=True) as cursor:
-        cursor.execute(
-            "UPDATE NGUOI_DUNG SET TrangThai = ? "
-            "WHERE MaNguoiDung = ? AND TrangThai = ?",
-            (trang_thai, ma_nguoi_dung, 0 if trang_thai else 1),
-        )
         if cursor.rowcount == 0:
             return False
 
-        ghi_nhat_ky(cursor, "Mở khóa" if trang_thai else "Khóa",
-                    "NGUOI_DUNG", ma_nguoi_dung)
+        ghi_nhat_ky(
+            cursor,
+            "Mở khóa" if trang_thai else "Khóa",
+            "NGUOI_DUNG",
+            ma_nguoi_dung
+        )
+
     return True
 
 
-@nguoi_dung_bp.route("/api/nguoi-dung/<int:ma_nguoi_dung>", methods=["DELETE"])
+# =========================================================
+# 5. KHÓA TÀI KHOẢN
+# =========================================================
+
+@nguoi_dung_bp.route(
+    "/api/nguoi-dung/<int:ma_nguoi_dung>",
+    methods=["DELETE"]
+)
 @chi_admin
 def xoa_nguoi_dung(ma_nguoi_dung):
-    """Khóa tài khoản (xóa mềm)."""
+
     if ma_nguoi_dung == g.ma_nguoi_dung:
-        return that_bai("Không thể tự khóa tài khoản của mình")
+        return that_bai(
+            "Không thể tự khóa tài khoản của mình"
+        )
 
-    if not _doi_trang_thai_nguoi_dung(ma_nguoi_dung, 0):
-        return that_bai("Không tìm thấy người dùng đang hoạt động", 404)
-    return thanh_cong("Đã khóa tài khoản người dùng")
+    if not _doi_trang_thai_nguoi_dung(
+        ma_nguoi_dung,
+        0
+    ):
+        return that_bai(
+            "Không tìm thấy người dùng đang hoạt động",
+            404
+        )
+
+    return thanh_cong(
+        "Đã khóa tài khoản người dùng"
+    )
 
 
-@nguoi_dung_bp.route("/api/nguoi-dung/<int:ma_nguoi_dung>/mo-khoa", methods=["PUT"])
+# =========================================================
+# 6. MỞ KHÓA TÀI KHOẢN
+# =========================================================
+
+@nguoi_dung_bp.route(
+    "/api/nguoi-dung/<int:ma_nguoi_dung>/mo-khoa",
+    methods=["PUT"]
+)
 @chi_admin
 def mo_khoa_nguoi_dung(ma_nguoi_dung):
-    if not _doi_trang_thai_nguoi_dung(ma_nguoi_dung, 1):
-        return that_bai("Không tìm thấy tài khoản đang bị khóa", 404)
-    return thanh_cong("Mở khóa tài khoản thành công")
+
+    if not _doi_trang_thai_nguoi_dung(
+        ma_nguoi_dung,
+        1
+    ):
+        return that_bai(
+            "Không tìm thấy tài khoản đang bị khóa",
+            404
+        )
+
+    return thanh_cong(
+        "Mở khóa tài khoản thành công"
+    )
 
 
-# =====================================================
+# =========================================================
+# 7. XÓA HẲN TÀI KHOẢN
+# =========================================================
 
+@nguoi_dung_bp.route(
+    "/api/nguoi-dung/<int:ma_nguoi_dung>/xoa-han",
+    methods=["DELETE"]
+)
+@chi_admin
+def xoa_han_nguoi_dung(ma_nguoi_dung):
+
+    # Không cho phép Admin tự xóa tài khoản đang đăng nhập
+    if ma_nguoi_dung == g.ma_nguoi_dung:
+        return that_bai(
+            "Không thể tự xóa tài khoản của mình"
+        )
+
+    with db_cursor(commit=True) as cursor:
+
+        # Kiểm tra tài khoản có tồn tại không
+        cursor.execute("""
+            SELECT MaNguoiDung
+            FROM NGUOI_DUNG
+            WHERE MaNguoiDung = ?
+        """, (ma_nguoi_dung,))
+
+        if not cursor.fetchone():
+            return that_bai(
+                "Không tìm thấy người dùng",
+                404
+            )
+
+        # Bỏ liên kết lịch sử đăng nhập
+        # Không xóa dữ liệu lịch sử đăng nhập
+        cursor.execute("""
+            UPDATE LOGIN_HISTORY
+            SET MaNguoiDung = NULL
+            WHERE MaNguoiDung = ?
+        """, (ma_nguoi_dung,))
+
+        # Giữ nhật ký hoạt động
+        cursor.execute("""
+            UPDATE ACTIVITY_LOGS
+            SET MaNguoiDung = NULL
+            WHERE MaNguoiDung = ?
+        """, (ma_nguoi_dung,))
+
+        # Giữ lịch sử giá
+        cursor.execute("""
+            UPDATE LICH_SU_GIA
+            SET MaNguoiDung = NULL
+            WHERE MaNguoiDung = ?
+        """, (ma_nguoi_dung,))
+
+        # Giữ lại đơn hàng
+        cursor.execute("""
+            UPDATE DON_HANG
+            SET MaNguoiDung = NULL
+            WHERE MaNguoiDung = ?
+        """, (ma_nguoi_dung,))
+
+        # Xóa hẳn tài khoản khỏi bảng NGUOI_DUNG
+        cursor.execute("""
+            DELETE FROM NGUOI_DUNG
+            WHERE MaNguoiDung = ?
+        """, (ma_nguoi_dung,))
+
+        # Ghi nhật ký thao tác xóa
+        ghi_nhat_ky(
+            cursor,
+            "Xóa tài khoản",
+            "NGUOI_DUNG",
+            ma_nguoi_dung,
+            f"Xóa hẳn tài khoản có mã {ma_nguoi_dung}"
+        )
+
+    return thanh_cong(
+        "Đã xóa hẳn tài khoản người dùng"
+    )

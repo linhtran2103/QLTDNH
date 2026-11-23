@@ -1,3 +1,4 @@
+
 document.addEventListener("DOMContentLoaded", async function () {
 
     // ==========================================
@@ -27,11 +28,11 @@ document.addEventListener("DOMContentLoaded", async function () {
         }
     }
 
-    // Chưa đăng nhập thì chuyển về trang đăng nhập (trừ chính trang đăng nhập)
     const isLoginPage = window.location.pathname.startsWith("/login");
     const isPublicOrderPage = window.location.pathname.startsWith("/order/");
     const currentPath = window.location.pathname;
     const currentRole = String(getUser()?.VaiTro || "").toLowerCase();
+
     const requiredRoles =
         currentPath === "/users"
             ? ["admin"]
@@ -103,14 +104,16 @@ document.addEventListener("DOMContentLoaded", async function () {
         return result;
     }
 
-    // Tải ảnh lên máy chủ, trả về đường dẫn ảnh
+    // Tải ảnh lên máy chủ
     async function uploadImage(file) {
         const formData = new FormData();
         formData.append("image", file);
 
         const response = await fetch("/api/upload-anh", {
             method: "POST",
-            headers: { Authorization: `Bearer ${getToken()}` },
+            headers: {
+                Authorization: `Bearer ${getToken()}`
+            },
             body: formData
         });
 
@@ -232,6 +235,11 @@ document.addEventListener("DOMContentLoaded", async function () {
         categoryFilter.value = selected;
     }
 
+    // ==========================================
+    // HIỂN THỊ DANH SÁCH MÓN ĂN
+    // ĐÃ BỔ SUNG NÚT XÓA
+    // ==========================================
+
     function renderFoods(foods) {
         if (!foodTableBody) return;
 
@@ -265,6 +273,7 @@ document.addEventListener("DOMContentLoaded", async function () {
                 row.appendChild(cell);
             });
 
+            // Trạng thái món ăn
             const statusCell = document.createElement("td");
             const badge = document.createElement("span");
 
@@ -281,18 +290,66 @@ document.addEventListener("DOMContentLoaded", async function () {
             statusCell.appendChild(badge);
             row.appendChild(statusCell);
 
+            // Các nút thao tác
             const actionCell = document.createElement("td");
-            if (["admin", "manager"].includes(
-                String(getUser()?.VaiTro || "").toLowerCase()
-            )) {
-                const editLink = document.createElement("a");
-                editLink.href = `/foods/edit/${food.MaMonAn}`;
-                editLink.className = "btn btn-sm btn-outline-primary";
-                editLink.textContent = "Sửa";
-                actionCell.appendChild(editLink);
-            }
-            row.appendChild(actionCell);
 
+            const role = String(getUser()?.VaiTro || "").toLowerCase();
+
+            if (["admin", "manager"].includes(role)) {
+
+                // Nút sửa
+                const editLink = document.createElement("a");
+
+                editLink.href = `/foods/edit/${food.MaMonAn}`;
+                editLink.className = "btn btn-sm btn-outline-primary me-1";
+                editLink.textContent = "Sửa";
+
+                actionCell.appendChild(editLink);
+
+                // Nút xóa
+                if (active) {
+                    const deleteButton = document.createElement("button");
+
+                    deleteButton.type = "button";
+                    deleteButton.className = "btn btn-sm btn-outline-danger";
+                    deleteButton.textContent = "Xóa";
+
+                    deleteButton.addEventListener("click", async function () {
+
+                        const confirmed = confirm(
+                            `Bạn có chắc chắn muốn xóa món "${food.TenMonAn}" không?\n\nMón ăn sẽ được chuyển sang trạng thái ngừng kinh doanh.`
+                        );
+
+                        if (!confirmed) return;
+
+                        try {
+                            deleteButton.disabled = true;
+                            deleteButton.textContent = "Đang xóa...";
+
+                            await apiRequest(
+                                `/api/mon-an/${food.MaMonAn}`,
+                                {
+                                    method: "DELETE"
+                                }
+                            );
+
+                            alert("Đã xóa món ăn thành công!");
+
+                            await loadFoods();
+
+                        } catch (error) {
+                            alert("Không thể xóa món ăn: " + error.message);
+
+                            deleteButton.disabled = false;
+                            deleteButton.textContent = "Xóa";
+                        }
+                    });
+
+                    actionCell.appendChild(deleteButton);
+                }
+            }
+
+            row.appendChild(actionCell);
             foodTableBody.appendChild(row);
         });
 
@@ -334,7 +391,8 @@ document.addEventListener("DOMContentLoaded", async function () {
     categoryFilter?.addEventListener("change", filterFoods);
     statusFilter?.addEventListener("change", filterFoods);
 
-        // ==========================================
+
+    // ==========================================
     // 3. DANH MUC MON AN
     // ==========================================
 
@@ -494,9 +552,11 @@ document.addEventListener("DOMContentLoaded", async function () {
         const code = document.getElementById("foodCode")?.value.trim();
         const name = document.getElementById("foodName")?.value.trim();
         const category = document.getElementById("foodCategory")?.value;
+
         const price = Number(
             document.getElementById("foodPrice")?.value
         );
+
         const description =
             document.getElementById("foodDescription")?.value.trim() || "";
 
@@ -635,9 +695,11 @@ document.addEventListener("DOMContentLoaded", async function () {
 
             const name = document.getElementById("foodName")?.value.trim();
             const category = document.getElementById("foodCategory")?.value;
+
             const price = Number(
                 document.getElementById("foodPrice")?.value
             );
+
             const description =
                 document.getElementById("foodDescription")?.value.trim() || "";
 
@@ -679,7 +741,9 @@ document.addEventListener("DOMContentLoaded", async function () {
 
         loadFoodForEdit();
     }
-        // ==========================================
+
+
+    // ==========================================
     // 7. DANG NHAP
     // ==========================================
 
@@ -697,6 +761,7 @@ document.addEventListener("DOMContentLoaded", async function () {
             document.getElementById("MatKhau")?.value;
 
         const loginMessage = document.getElementById("loginMessage");
+
         const submitButton = loginForm.querySelector(
             'button[type="submit"]'
         );
@@ -742,6 +807,7 @@ document.addEventListener("DOMContentLoaded", async function () {
             }
 
             localStorage.setItem(TOKEN_KEY, result.token);
+
             localStorage.setItem(
                 USER_KEY,
                 JSON.stringify(result.data || {})
@@ -790,6 +856,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     // ==========================================
 
     const currentUser = getUser();
+
     const roleLabels = {
         admin: "Admin",
         manager: "Quản lý",
@@ -798,8 +865,12 @@ document.addEventListener("DOMContentLoaded", async function () {
     };
 
     document.querySelectorAll("[data-roles]").forEach(element => {
-        const allowed = element.dataset.roles.split(",").map(value => value.trim());
+        const allowed = element.dataset.roles
+            .split(",")
+            .map(value => value.trim());
+
         const role = String(currentUser?.VaiTro || "").toLowerCase();
+
         if (!allowed.some(value => value.toLowerCase() === role)) {
             element.hidden = true;
         }

@@ -24,7 +24,8 @@
 .dish img { width:104px; height:104px; flex:none; object-fit:cover; border-radius:10px; background:#efe8da; }
 .dish-b { flex:1; min-width:0; display:flex; flex-direction:column; }
 .dish h3 { font-size:1rem; font-weight:600; margin:2px 0 4px; }
-.dish p { font-size:.82rem; color:var(--mu); margin:0 0 6px; display:-webkit-box; -webkit-line-clamp:2;
+.dish p { font-size:.82rem; color:var(--mu); margin:0 0 6px; display:-webkit-box; -webkit-line-clamp: 2;
+line-clamp: 2;
           -webkit-box-orient:vertical; overflow:hidden; }
 .dish-f { margin-top:auto; display:flex; align-items:center; justify-content:space-between; }
 .price { font-weight:700; color:var(--gd); }
@@ -60,7 +61,10 @@
 {% endblock %}
 
 {% block content %}
-<div class="od">
+<div class="od"
+     id="orderApp"
+     data-table-id="{{ ma_ban }}"
+     data-qr-token="{{ qr_token }}">
     <header class="od-head">
         <a href="/" class="brand">RESTOMENU</a>
         <h1 id="tableName">Đang tải bàn...</h1>
@@ -96,13 +100,15 @@
 {% block extra_js %}
 <script>
 document.addEventListener("DOMContentLoaded", async () => {
-    const tableId = {{ ma_ban|tojson }};
-    const qrToken = {{ qr_token|tojson }};
-    const $ = id => document.getElementById(id);
+    const appElement = $("orderApp");
+    const tableId = Number(appElement.dataset.tableId);
+    const qrToken = appElement.dataset.qrToken;
+
     const PH = "data:image/svg+xml;utf8," + encodeURIComponent(
         '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120"><rect width="120" height="120" fill="#efe8da"/>' +
         '<path d="M30 60h60a30 30 0 0 1-60 0z" fill="#c9a66b"/>' +
-        '<path d="M42 48c0-8 8-8 8-16M64 48c0-8 8-8 8-16" stroke="#c9a66b" fill="none" stroke-width="3" stroke-linecap="round"/></svg>');
+        '<path d="M42 48c0-8 8-8 8-16M64 48c0-8 8-8 8-16" stroke="#c9a66b" fill="none" stroke-width="3" stroke-linecap="round"/></svg>'
+    );
     const money = v => new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(Number(v) || 0);
     const esc = v => String(v ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" })[c]);
     const img = f => esc(f.HinhAnh || PH);
@@ -372,6 +378,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         $("tableName").textContent = "Không tải được bàn";
         $("menuItems").innerHTML = `<p class="text-danger pt-3">${esc(e.message)}</p>`;
     }
-});
+    });
 </script>
-{% endblock %}
+{% endblock %} 
