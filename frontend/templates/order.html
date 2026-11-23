@@ -2,38 +2,95 @@
 
 {% block title %}Thực đơn và đặt món | RestoMenu{% endblock %}
 
+{% block extra_css %}
+<style>
+.od { --n:#14243a; --g:#c9a66b; --gd:#8a6a35; --iv:#f8f6f1; --ln:#eae4d8; --tx:#263247; --mu:#7b8696;
+      min-height:100vh; padding-bottom:110px; background:var(--iv); color:var(--tx); }
+.od-head { background:var(--n); color:#fff; padding:26px 20px 22px; text-align:center; }
+.od-head .brand { font-size:.8rem; letter-spacing:.12em; color:var(--g); text-decoration:none; }
+.od-head h1 { font:600 1.7rem 'Noto Serif JP',serif; margin:6px 0 4px; }
+.od-head p { margin:0; font-size:.85rem; color:#b9c2cf; }
+.od-wrap { max-width:760px; margin:0 auto; padding:0 14px; }
+.chips { position:sticky; top:0; z-index:20; background:var(--iv); display:flex; gap:8px; overflow-x:auto;
+         padding:12px 14px; margin:0 -14px; scrollbar-width:none; border-bottom:1px solid var(--ln); }
+.chips::-webkit-scrollbar { display:none; }
+.chip { flex:none; border:1px solid var(--ln); background:#fff; color:var(--tx); border-radius:999px;
+        padding:7px 15px; font-size:.88rem; font-weight:500; }
+.chip.on { background:var(--n); border-color:var(--n); color:#fff; }
+.cat-title { font:600 1.05rem 'Noto Serif JP',serif; margin:22px 2px 10px; color:var(--n); }
+.dish { display:flex; gap:12px; background:#fff; border:1px solid var(--ln); border-radius:14px;
+        padding:10px; margin-bottom:10px; cursor:pointer; }
+.dish:focus-visible, .chip:focus-visible, .btn-n:focus-visible { outline:3px solid var(--g); outline-offset:2px; }
+.dish img { width:104px; height:104px; flex:none; object-fit:cover; border-radius:10px; background:#efe8da; }
+.dish-b { flex:1; min-width:0; display:flex; flex-direction:column; }
+.dish h3 { font-size:1rem; font-weight:600; margin:2px 0 4px; }
+.dish p { font-size:.82rem; color:var(--mu); margin:0 0 6px; display:-webkit-box; -webkit-line-clamp:2;
+          -webkit-box-orient:vertical; overflow:hidden; }
+.dish-f { margin-top:auto; display:flex; align-items:center; justify-content:space-between; }
+.price { font-weight:700; color:var(--gd); }
+.add { min-width:38px; height:38px; border:0; border-radius:50%; background:var(--n); color:#fff;
+       font-size:1.3rem; line-height:1; padding:0 10px; }
+.add.has { border-radius:999px; font-size:.95rem; font-weight:600; background:var(--g); color:var(--n); }
+.bar { position:fixed; left:0; right:0; bottom:0; z-index:30; padding:10px 14px calc(10px + env(safe-area-inset-bottom,0px)); }
+.bar button { width:100%; max-width:760px; margin:0 auto; display:flex; align-items:center; justify-content:space-between;
+        border:0; border-radius:14px; background:var(--n); color:#fff; padding:14px 18px; font-weight:600;
+        box-shadow:0 8px 24px rgba(20,36,58,.35); }
+.bar .cnt { background:var(--g); color:var(--n); border-radius:999px; min-width:26px; height:26px; display:inline-grid;
+        place-items:center; font-size:.85rem; margin-right:10px; }
+.sheet { border-radius:20px 20px 0 0; max-height:92vh; }
+.sheet .offcanvas-body { padding:0; }
+.hero { width:100%; height:240px; object-fit:cover; background:#efe8da; }
+.pad { padding:16px 18px; }
+.qty { display:inline-flex; align-items:center; gap:14px; border:1px solid var(--ln); border-radius:999px; padding:4px; }
+.qty button { width:36px; height:36px; border:0; border-radius:50%; background:var(--iv); font-size:1.2rem; }
+.btn-n { width:100%; border:0; border-radius:12px; background:var(--n); color:#fff; padding:14px; font-weight:600; }
+.btn-n:disabled { opacity:.5; }
+.line { display:flex; gap:12px; align-items:center; padding:12px 0; border-bottom:1px solid var(--ln); }
+.line img { width:56px; height:56px; border-radius:8px; object-fit:cover; flex:none; background:#efe8da; }
+.foot { position:sticky; bottom:0; background:#fff; border-top:1px solid var(--ln);
+        margin:12px -18px 0; padding:12px 18px calc(12px + env(safe-area-inset-bottom,0px)); }
+.sheet-x { position:absolute; top:12px; right:12px; z-index:2; width:36px; height:36px; border:0; border-radius:50%;
+           background:rgba(255,255,255,.92); font-size:1.1rem; }
+.confirm-item { display:flex; justify-content:space-between; gap:12px; padding:11px 0; border-bottom:1px solid var(--ln); }
+.confirm-actions { display:grid; grid-template-columns:1fr; gap:9px; }
+.btn-outline-n { width:100%; border:1px solid var(--n); border-radius:12px; background:#fff; color:var(--n); padding:12px; font-weight:600; }
+@media (prefers-reduced-motion: reduce) { .offcanvas { transition:none; } }
+@media (min-width:768px) { .dish img { width:120px; height:120px; } }
+</style>
+{% endblock %}
+
 {% block content %}
-<main class="container py-4">
-    <header class="text-center mb-4">
-        <a href="/" class="navbar-brand fw-bold text-decoration-none">RestoMenu</a>
-        <h1 class="h3 fw-bold mt-3 mb-1" id="tableName">Đang tải bàn...</h1>
-        <p class="text-muted">Chọn món và gửi yêu cầu đến nhân viên.</p>
+<div class="od">
+    <header class="od-head">
+        <a href="/" class="brand">RESTOMENU</a>
+        <h1 id="tableName">Đang tải bàn...</h1>
+        <p>Chạm vào món để xem chi tiết, rồi gửi đơn cho nhân viên.</p>
     </header>
 
-    <div id="orderMessage" class="alert d-none" role="alert"></div>
-    <div class="row g-4">
-        <section class="col-lg-8">
-            <h2 class="h5 fw-bold mb-3">Thực đơn</h2>
-            <div id="menuItems" class="row g-3">
-                <div class="col-12 text-muted">Đang tải thực đơn...</div>
-            </div>
-        </section>
-        <aside class="col-lg-4">
-            <div class="card shadow-sm">
-                <div class="card-body">
-                    <h2 class="h5 fw-bold">Đơn của bạn</h2>
-                    <div id="cartItems" class="mb-3 text-muted">Chưa chọn món.</div>
-                    <label class="form-label" for="orderNote">Ghi chú cho nhà hàng</label>
-                    <textarea id="orderNote" class="form-control mb-3" rows="3"
-                        maxlength="500" placeholder="Ví dụ: ít cay, không hành..."></textarea>
-                    <button id="submitOrder" class="btn btn-primary w-100" disabled>
-                        Gửi đơn
-                    </button>
-                </div>
-            </div>
-        </aside>
+    <main class="od-wrap">
+        <div id="chips" class="chips" role="tablist" aria-label="Danh mục"></div>
+        <div id="menuItems"><p class="text-muted pt-3">Đang tải thực đơn...</p></div>
+    </main>
+
+    <div id="cartBar" class="bar d-none">
+        <button type="button" id="openCart">
+            <span><span class="cnt" id="barCount">0</span>Xem giỏ và gửi đơn</span>
+            <span id="barTotal"></span>
+        </button>
     </div>
-</main>
+</div>
+
+<div class="offcanvas offcanvas-bottom sheet" id="detailSheet" tabindex="-1" style="height:auto" aria-label="Chi tiết món">
+    <div class="offcanvas-body position-relative" id="detailBody"></div>
+</div>
+
+<div class="offcanvas offcanvas-bottom sheet" id="cartSheet" tabindex="-1" style="height:auto" aria-label="Giỏ hàng">
+    <div class="offcanvas-header">
+        <h2 class="h5 fw-bold m-0">Đơn của bạn</h2>
+        <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Đóng"></button>
+    </div>
+    <div class="offcanvas-body"><div class="pad pt-0" id="cartBody"></div></div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
@@ -41,134 +98,280 @@
 document.addEventListener("DOMContentLoaded", async () => {
     const tableId = {{ ma_ban|tojson }};
     const qrToken = {{ qr_token|tojson }};
-    const menuElement = document.getElementById("menuItems");
-    const cartElement = document.getElementById("cartItems");
-    const messageElement = document.getElementById("orderMessage");
-    const submitButton = document.getElementById("submitOrder");
-    const cart = new Map();
-    const money = value => new Intl.NumberFormat("vi-VN", {
-        style: "currency", currency: "VND"
-    }).format(Number(value) || 0);
-    const escapeHTML = value => String(value ?? "").replace(/[&<>"']/g, char => ({
-        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;"
-    })[char]);
-    const publicRequest = async url => {
-        const response = await fetch(url);
-        const result = await response.json();
-        if (!response.ok || result.status !== "success") {
-            throw new Error(result.message || "Không tải được dữ liệu.");
-        }
-        return result.data;
+    const $ = id => document.getElementById(id);
+    const PH = "data:image/svg+xml;utf8," + encodeURIComponent(
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120"><rect width="120" height="120" fill="#efe8da"/>' +
+        '<path d="M30 60h60a30 30 0 0 1-60 0z" fill="#c9a66b"/>' +
+        '<path d="M42 48c0-8 8-8 8-16M64 48c0-8 8-8 8-16" stroke="#c9a66b" fill="none" stroke-width="3" stroke-linecap="round"/></svg>');
+    const money = v => new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(Number(v) || 0);
+    const esc = v => String(v ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" })[c]);
+    const img = f => esc(f.HinhAnh || PH);
+    const get = async url => {
+        const r = await fetch(url), j = await r.json();
+        if (!r.ok || j.status !== "success") throw new Error(j.message || "Không tải được dữ liệu.");
+        return j.data;
     };
 
-    function renderCart() {
-        const items = [...cart.values()];
-        submitButton.disabled = items.length === 0;
-        if (!items.length) {
-            cartElement.textContent = "Chưa chọn món.";
+    const detailSheet = new bootstrap.Offcanvas($("detailSheet"));
+    const cartSheet = new bootstrap.Offcanvas($("cartSheet"));
+    const cart = new Map();
+    let foods = [], activeCat = "all";
+    let confirmingOrder = false;
+    let orderNoteValue = "";
+    let isSendingOrder = false;
+
+    const totalQty = () => [...cart.values()].reduce((s, i) => s + i.SoLuong, 0);
+    const totalMoney = () => [...cart.values()].reduce((s, i) => s + i.SoLuong * Number(i.Gia), 0);
+
+    function renderChips() {
+        const cats = [...new Set(foods.map(f => f.TenDanhMuc))];
+        $("chips").innerHTML = [["all", "Tất cả"], ...cats.map(c => [c, c])].map(([v, t]) =>
+            `<button type="button" class="chip ${v === activeCat ? "on" : ""}" data-cat="${esc(v)}">${esc(t)}</button>`).join("");
+        $("chips").querySelectorAll(".chip").forEach(b => b.addEventListener("click", () => {
+            activeCat = b.dataset.cat; renderChips(); renderMenu();
+        }));
+    }
+
+    function renderMenu() {
+        const list = foods.filter(f => activeCat === "all" || f.TenDanhMuc === activeCat);
+        if (!list.length) { $("menuItems").innerHTML = '<p class="text-muted pt-3">Chưa có món trong mục này.</p>'; return; }
+        const groups = {};
+        list.forEach(f => (groups[f.TenDanhMuc] = groups[f.TenDanhMuc] || []).push(f));
+        $("menuItems").innerHTML = Object.entries(groups).map(([cat, items]) =>
+            `<h2 class="cat-title">${esc(cat)}</h2>` + items.map(f => {
+                const n = cart.get(Number(f.MaMonAn))?.SoLuong || 0;
+                return `<article class="dish" tabindex="0" role="button" data-id="${f.MaMonAn}" aria-label="Xem chi tiết ${esc(f.TenMonAn)}">
+                    <img src="${img(f)}" alt="" loading="lazy" onerror="this.onerror=null;this.src='${PH}'">
+                    <div class="dish-b">
+                        <h3>${esc(f.TenMonAn)}</h3>
+                        <p>${esc(f.MoTa || "")}</p>
+                        <div class="dish-f"><span class="price">${money(f.Gia)}</span>
+                            <button type="button" class="add ${n ? "has" : ""}" data-add="${f.MaMonAn}" aria-label="Thêm ${esc(f.TenMonAn)}">${n ? "×" + n : "+"}</button>
+                        </div></div></article>`;
+            }).join("")).join("");
+        $("menuItems").querySelectorAll(".dish").forEach(el => {
+            const open = () => openDetail(Number(el.dataset.id));
+            el.addEventListener("click", open);
+            el.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); open(); } });
+        });
+        $("menuItems").querySelectorAll("[data-add]").forEach(b => b.addEventListener("click", e => {
+            e.stopPropagation(); addToCart(Number(b.dataset.add), 1);
+        }));
+    }
+
+    function addToCart(id, qty, note) {
+        const f = foods.find(x => Number(x.MaMonAn) === id);
+        const it = cart.get(id) || { MaMonAn: id, TenMonAn: f.TenMonAn, Gia: f.Gia, HinhAnh: f.HinhAnh, SoLuong: 0, GhiChu: "" };
+        it.SoLuong = Math.min(50, it.SoLuong + qty);
+        if (note) it.GhiChu = note;
+        cart.set(id, it);
+        refresh();
+    }
+
+    function refresh() {
+        const q = totalQty();
+        $("cartBar").classList.toggle("d-none", q === 0);
+        $("barCount").textContent = q;
+        $("barTotal").textContent = money(totalMoney());
+        renderMenu();
+        if ($("cartSheet").classList.contains("show")) renderCart();
+    }
+
+    function openDetail(id) {
+        const f = foods.find(x => Number(x.MaMonAn) === id);
+        let qty = 1;
+        $("detailBody").innerHTML = `
+            <button type="button" class="sheet-x" data-bs-dismiss="offcanvas" aria-label="Đóng">✕</button>
+            <img class="hero" src="${img(f)}" alt="${esc(f.TenMonAn)}" onerror="this.onerror=null;this.src='${PH}'">
+            <div class="pad">
+                <small class="text-muted">${esc(f.TenDanhMuc)}</small>
+                <h2 class="h4 fw-bold mt-1" style="font-family:'Noto Serif JP',serif">${esc(f.TenMonAn)}</h2>
+                <div class="price fs-5 mb-2">${money(f.Gia)}</div>
+                <p class="text-muted">${esc(f.MoTa || "Nhà hàng chưa có mô tả cho món này.")}</p>
+                <label class="form-label small" for="dNote">Ghi chú cho món (không bắt buộc)</label>
+                <input id="dNote" class="form-control mb-3" maxlength="250" placeholder="Ví dụ: ít cay, không hành">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="qty"><button type="button" id="dMinus" aria-label="Giảm">−</button>
+                        <strong id="dQty">1</strong><button type="button" id="dPlus" aria-label="Tăng">+</button></div>
+                    <button type="button" class="btn-n" id="dAdd"></button>
+                </div></div>`;
+        const sync = () => { $("dQty").textContent = qty; $("dAdd").textContent = `Thêm vào giỏ · ${money(Number(f.Gia) * qty)}`; };
+        $("dMinus").onclick = () => { qty = Math.max(1, qty - 1); sync(); };
+        $("dPlus").onclick = () => { qty = Math.min(50, qty + 1); sync(); };
+        $("dAdd").onclick = () => { addToCart(id, qty, $("dNote").value.trim()); detailSheet.hide(); };
+        sync(); detailSheet.show();
+    }
+    function renderCart(done) {
+        if (done) {
+            $("cartBody").innerHTML = `<div class="text-center py-4"><div style="font-size:2.4rem">✓</div>
+                <h3 class="h5 fw-bold">Đã gọi món thành công</h3>
+                <p class="text-muted">Mã đơn #${esc(done)}. Nhân viên sẽ tiếp nhận và mang món đến bàn của bạn.</p>
+                <button type="button" class="btn-n" data-bs-dismiss="offcanvas">Đóng</button></div>`;
             return;
         }
-        cartElement.innerHTML = items.map(item => `
-            <div class="d-flex justify-content-between align-items-start border-bottom py-2">
-                <div>
-                    <strong>${escapeHTML(item.TenMonAn)}</strong>
-                    <div class="small text-muted">${money(item.Gia)} × ${item.SoLuong}</div>
-                </div>
-                <div class="btn-group btn-group-sm" role="group">
-                    <button class="btn btn-outline-secondary" data-change="${item.MaMonAn}" data-step="-1">−</button>
-                    <button class="btn btn-outline-secondary" data-change="${item.MaMonAn}" data-step="1">+</button>
-                </div>
-            </div>`).join("");
-        cartElement.querySelectorAll("[data-change]").forEach(button => {
-            button.addEventListener("click", () => {
-                const item = cart.get(Number(button.dataset.change));
-                item.SoLuong += Number(button.dataset.step);
-                if (item.SoLuong < 1) cart.delete(item.MaMonAn);
-                renderCart();
-            });
-        });
-    }
 
-    try {
-        const [table, menu] = await Promise.all([
-            publicRequest(`/api/public/ban/${tableId}?token=${encodeURIComponent(qrToken)}`),
-            publicRequest("/api/public/menu")
-        ]);
-        document.getElementById("tableName").textContent = table.TenBan;
-        menuElement.replaceChildren();
-        if (!menu.length) {
-            menuElement.textContent = "Nhà hàng chưa có món đang phục vụ.";
+        if (!cart.size) {
+            confirmingOrder = false;
+            $("cartBody").innerHTML = '<p class="text-muted py-4 text-center">Chưa chọn món nào.</p>';
+            return;
         }
-        menu.forEach(food => {
-            const column = document.createElement("div");
-            column.className = "col-12 col-md-6";
-            column.innerHTML = `
-                <article class="card h-100">
-                    ${food.HinhAnh ? `<img src="${escapeHTML(food.HinhAnh)}"
-                        class="card-img-top" alt="${escapeHTML(food.TenMonAn)}"
-                        style="height:180px;object-fit:cover">` : ""}
-                    <div class="card-body d-flex flex-column">
-                        <small class="text-muted">${escapeHTML(food.TenDanhMuc)}</small>
-                        <h3 class="h6 fw-bold mt-1">${escapeHTML(food.TenMonAn)}</h3>
-                        <p class="small text-muted flex-grow-1">${escapeHTML(food.MoTa || "")}</p>
-                        <div class="d-flex justify-content-between align-items-center">
-                            <strong>${money(food.Gia)}</strong>
-                            <button class="btn btn-sm btn-outline-primary" type="button">Thêm</button>
-                        </div>
-                    </div>
-                </article>`;
-            column.querySelector("button").addEventListener("click", () => {
-                const id = Number(food.MaMonAn);
-                const item = cart.get(id) || {
-                    MaMonAn: id, TenMonAn: food.TenMonAn,
-                    Gia: food.Gia, SoLuong: 0
-                };
-                if (item.SoLuong >= 50) return;
-                item.SoLuong += 1;
-                cart.set(id, item);
-                renderCart();
-            });
-            menuElement.appendChild(column);
+
+        if (confirmingOrder) {
+            renderOrderConfirmation();
+            return;
+        }
+
+        const note = $("orderNote") ? $("orderNote").value : orderNoteValue;
+        $("cartBody").innerHTML = [...cart.values()].map(i => `
+            <div class="line"><img src="${esc(i.HinhAnh || PH)}" alt="" onerror="this.onerror=null;this.src='${PH}'">
+                <div class="flex-grow-1"><strong>${esc(i.TenMonAn)}</strong>
+                    <div class="small text-muted">${money(i.Gia)}${i.GhiChu ? " · " + esc(i.GhiChu) : ""}</div></div>
+                <div class="qty"><button type="button" data-step="-1" data-id="${i.MaMonAn}" aria-label="Giảm">−</button>
+                    <strong>${i.SoLuong}</strong><button type="button" data-step="1" data-id="${i.MaMonAn}" aria-label="Tăng">+</button></div>
+            </div>`).join("") + `
+            <label class="form-label small mt-3" for="orderNote">Ghi chú cho nhà hàng</label>
+            <textarea id="orderNote" class="form-control mb-2" rows="2" maxlength="500" placeholder="Ví dụ: mang nước trước"></textarea>
+            <div class="foot">
+                <div class="d-flex justify-content-between mb-2"><span>Tạm tính</span><strong class="price fs-5">${money(totalMoney())}</strong></div>
+                <button type="button" class="btn-n" id="confirmItems">Xác nhận món</button>
+            </div>`;
+        $("orderNote").value = note;
+
+        $("cartBody").querySelectorAll("[data-step]").forEach(b => b.addEventListener("click", () => {
+            const it = cart.get(Number(b.dataset.id));
+            if (!it) return;
+            orderNoteValue = $("orderNote") ? $("orderNote").value : orderNoteValue;
+            it.SoLuong = Math.min(50, it.SoLuong + Number(b.dataset.step));
+            if (it.SoLuong < 1) cart.delete(it.MaMonAn);
+            refresh();
+            if (!cart.size) cartSheet.hide();
+        }));
+
+        $("confirmItems").addEventListener("click", () => {
+            orderNoteValue = $("orderNote").value.trim();
+            confirmingOrder = true;
+            renderCart();
         });
-    } catch (error) {
-        document.getElementById("tableName").textContent = "Không tải được bàn";
-        menuElement.textContent = error.message;
-        return;
     }
 
-    submitButton.addEventListener("click", async () => {
-        submitButton.disabled = true;
+    function renderOrderConfirmation() {
+        $("cartBody").innerHTML = `
+            <div class="pb-2">
+                <h3 class="h6 fw-bold mb-1">Kiểm tra lại đơn gọi món</h3>
+                <p class="small text-muted mb-2">Vui lòng kiểm tra món ăn, số lượng và ghi chú trước khi gửi đến nhà hàng.</p>
+            </div>
+            ${[...cart.values()].map(i => `
+                <div class="confirm-item">
+                    <div class="min-w-0">
+                        <strong>${esc(i.TenMonAn)}</strong>
+                        <div class="small text-muted">${i.SoLuong} × ${money(i.Gia)}</div>
+                        ${i.GhiChu ? `<div class="small text-muted">Ghi chú: ${esc(i.GhiChu)}</div>` : ""}
+                    </div>
+                    <strong class="text-nowrap">${money(Number(i.Gia) * i.SoLuong)}</strong>
+                </div>`).join("")}
+            <div class="py-3">
+                <div class="small text-muted mb-1">Ghi chú cho nhà hàng</div>
+                <div>${orderNoteValue ? esc(orderNoteValue) : '<span class="text-muted">Không có</span>'}</div>
+            </div>
+            <div id="cartError" class="alert alert-danger d-none py-2" role="alert"></div>
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <span class="fw-semibold">Tổng cộng</span>
+                <strong class="price fs-5">${money(totalMoney())}</strong>
+            </div>
+            <div class="confirm-actions" style="display:flex !important; flex-direction:column !important; gap:12px !important; width:100% !important; margin-top:16px !important; position:relative !important; z-index:10 !important;">
+                <button
+                    type="button"
+                    id="sendOrder"
+                    ${isSendingOrder ? "disabled" : ""}
+                    style="display:block !important; visibility:visible !important; opacity:1 !important; position:relative !important; z-index:11 !important; width:100% !important; min-height:54px !important; padding:14px !important; background-color:#14243a !important; color:#ffffff !important; border:1px !important; border-radius:12px !important; font-size:16px !important; font-weight:700 !important; line-height:1.4 !important; text-align:center !important; cursor:pointer !important;">
+                    ${isSendingOrder ? "Đang gửi đơn..." : "Xác nhận & gọi món"}
+                </button>
+                <button
+                    type="button"
+                    id="backToCart"
+                    ${isSendingOrder ? "disabled" : ""}
+                    style="display:block !important; visibility:visible !important; opacity:1 !important; position:relative !important; z-index:11 !important; width:100% !important; min-height:50px !important; padding:12px !important; background-color:#ffffff !important; color:#14243a !important; border:1px solid #14243a !important; border-radius:12px !important; font-size:15px !important; font-weight:600 !important; line-height:1.4 !important; text-align:center !important; cursor:pointer !important;">
+                    Quay lại chỉnh sửa
+                </button>
+            </div>`;
+
+        $("backToCart").addEventListener("click", () => {
+            confirmingOrder = false;
+            renderCart();
+        });
+        $("sendOrder").addEventListener("click", sendOrder);
+    }
+    async function sendOrder() {
+        if (isSendingOrder || !cart.size) return;
+
+        const btn = $("sendOrder");
+        const err = $("cartError");
+        isSendingOrder = true;
+        if (btn) {
+            btn.disabled = true;
+            btn.textContent = "Đang gửi đơn...";
+        }
+        if (err) err.classList.add("d-none");
+
         try {
-            const response = await fetch("/api/public/don-hang", {
+            const r = await fetch("/api/public/don-hang", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     MaBan: tableId,
                     QrToken: qrToken,
-                    GhiChu: document.getElementById("orderNote").value,
-                    ChiTiet: [...cart.values()].map(item => ({
-                        MaMonAn: item.MaMonAn, SoLuong: item.SoLuong
+                    GhiChu: orderNoteValue,
+                    ChiTiet: [...cart.values()].map(i => ({
+                        MaMonAn: i.MaMonAn,
+                        SoLuong: i.SoLuong,
+                        GhiChu: i.GhiChu || null
                     }))
                 })
             });
-            const result = await response.json();
-            if (!response.ok || result.status !== "success") {
-                throw new Error(result.message || "Không gửi được đơn.");
+
+            const j = await r.json();
+            if (!r.ok || j.status !== "success") {
+                throw new Error(j.message || "Không gửi được đơn.");
             }
-            messageElement.className = "alert alert-success";
-            messageElement.textContent =
-                `${result.message}. Mã đơn #${result.data.MaDonHang}.`;
-            messageElement.classList.remove("d-none");
+
+            const orderId = j.data && j.data.MaDonHang;
+            if (orderId == null) throw new Error("Phản hồi từ máy chủ không có mã đơn hàng.");
+
             cart.clear();
-            document.getElementById("orderNote").value = "";
-            renderCart();
-        } catch (error) {
-            messageElement.className = "alert alert-danger";
-            messageElement.textContent = error.message;
-            messageElement.classList.remove("d-none");
-            submitButton.disabled = cart.size === 0;
+            orderNoteValue = "";
+            confirmingOrder = false;
+            refresh();
+            renderCart(orderId);
+        } catch (e) {
+            const currentError = $("cartError");
+            if (currentError) {
+                currentError.textContent = e.message || "Có lỗi xảy ra khi gửi đơn.";
+                currentError.classList.remove("d-none");
+            }
+            const currentButton = $("sendOrder");
+            if (currentButton) {
+                currentButton.disabled = false;
+                currentButton.textContent = "Thử gửi lại";
+            }
+        } finally {
+            isSendingOrder = false;
         }
-    });
+    }
+    $("openCart").addEventListener("click", () => { renderCart(); cartSheet.show(); });
+
+    try {
+        const [table, menu] = await Promise.all([
+            get(`/api/public/ban/${tableId}?token=${encodeURIComponent(qrToken)}`),
+            get("/api/public/menu")
+        ]);
+        $("tableName").textContent = table.TenBan;
+        foods = menu;
+        if (!foods.length) { $("menuItems").innerHTML = '<p class="text-muted pt-3">Nhà hàng chưa có món đang phục vụ.</p>'; return; }
+        renderChips(); renderMenu();
+    } catch (e) {
+        $("tableName").textContent = "Không tải được bàn";
+        $("menuItems").innerHTML = `<p class="text-danger pt-3">${esc(e.message)}</p>`;
+    }
 });
 </script>
 {% endblock %}

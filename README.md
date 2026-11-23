@@ -44,6 +44,8 @@ Hệ thống quản lý món ăn và danh mục cho nhà hàng, có đăng nhậ
 ```powershell
 cd backend
 python app.py
+hoặc 
+python -m backend.app
 ```
 - Giao diện: http://127.0.0.1:5000 (tự chuyển sang `/login` nếu chưa đăng nhập)
 - Kiểm tra kết nối CSDL: http://127.0.0.1:5000/api/health

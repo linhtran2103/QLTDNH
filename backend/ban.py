@@ -1,3 +1,4 @@
+import socket
 import base64
 from decimal import Decimal
 from io import BytesIO
@@ -37,7 +38,15 @@ def _token_ban_hop_le(ma_ban, token):
     except BadSignature:
         return False
 
-
+def _lay_ip_lan():
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        sock.connect(("8.8.8.8", 80))  # không gửi dữ liệu, chỉ để biết IP đang dùng
+        return sock.getsockname()[0]
+    except OSError:
+        return "127.0.0.1"
+    finally:
+        sock.close()
 def _tao_qr(url):
     image = qrcode.make(url)
     buffer = BytesIO()
@@ -206,6 +215,11 @@ def danh_sach_ban():
         )
         tables = convert_to_json(cursor)
 
+    base_url = current_app.config["PUBLIC_BASE_URL"]
+    if not base_url or "127.0.0.1" in base_url or "localhost" in base_url:
+        port = request.host.split(":")[-1] if ":" in request.host else "5000"
+        base_url = f"http://{_lay_ip_lan()}:{port}"
+
     for table in tables:
         token = _tao_token_ban(table["MaBan"])
         path = url_for(
@@ -214,12 +228,7 @@ def danh_sach_ban():
             token=token,
             _external=False,
         )
-        base_url = current_app.config["PUBLIC_BASE_URL"]
-        order_url = (
-            f"{base_url}{path}"
-            if base_url
-            else request.url_root.rstrip("/") + path
-        )
+        order_url = f"{base_url}{path}"
         table["UrlDatMon"] = order_url
         table["QRCode"] = _tao_qr(order_url)
     return thanh_cong(data=tables)
