@@ -1,0 +1,794 @@
+
+{% extends "base.html" %}
+
+{% block title %}Thống kê doanh thu | RestoMenu{% endblock %}
+
+{% block extra_css %}
+<style>
+    .revenue-page {
+        min-height: 100vh;
+        padding: 30px;
+        background: #f8f5ef;
+        font-family: "Be Vietnam Pro", sans-serif;
+    }
+
+    .revenue-container {
+        max-width: 1400px;
+        margin: auto;
+    }
+
+    .revenue-back {
+        display: inline-block;
+        margin-bottom: 22px;
+        color: #641f2b;
+        text-decoration: none;
+        font-weight: 600;
+    }
+
+    .revenue-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 15px;
+        margin-bottom: 25px;
+    }
+
+    .revenue-header h1 {
+        margin: 0 0 8px;
+        color: #641f2b;
+        font-size: 28px;
+        font-weight: 800;
+    }
+
+    .revenue-header p {
+        margin: 0;
+        color: #827970;
+        font-size: 13px;
+    }
+
+    .filter-card,
+    .revenue-card {
+        padding: 22px;
+        border: 1px solid #e9e1d6;
+        border-radius: 14px;
+        background: #fff;
+        margin-bottom: 22px;
+    }
+
+    .filter-card label {
+        display: block;
+        margin-bottom: 7px;
+        font-size: 13px;
+        font-weight: 600;
+        color: #51443d;
+    }
+
+    .filter-card input {
+        width: 100%;
+        padding: 10px 12px;
+        border: 1px solid #ded6cc;
+        border-radius: 8px;
+        outline: none;
+    }
+
+    .filter-card input:focus {
+        border-color: #641f2b;
+    }
+
+    .btn-revenue {
+        padding: 10px 18px;
+        border: none;
+        border-radius: 8px;
+        background: #641f2b;
+        color: white;
+        font-weight: 600;
+    }
+
+    .btn-revenue:hover {
+        background: #842c3b;
+    }
+
+    .btn-reset {
+        padding: 10px 18px;
+        border: 1px solid #ded6cc;
+        border-radius: 8px;
+        background: white;
+        color: #51443d;
+        font-weight: 600;
+    }
+
+    .revenue-stat {
+        height: 100%;
+        padding: 22px;
+        border: 1px solid #e9e1d6;
+        border-radius: 14px;
+        background: white;
+    }
+
+    .revenue-stat .stat-label {
+        color: #827970;
+        font-size: 13px;
+        margin-bottom: 12px;
+    }
+
+    .revenue-stat .stat-value {
+        color: #302a27;
+        font-size: 25px;
+        font-weight: 800;
+        overflow-wrap: anywhere;
+    }
+
+    .revenue-stat .stat-note {
+        margin-top: 8px;
+        color: #999087;
+        font-size: 12px;
+    }
+
+    .revenue-stat.primary {
+        background: #641f2b;
+        border-color: #641f2b;
+    }
+
+    .revenue-stat.primary .stat-label,
+    .revenue-stat.primary .stat-value,
+    .revenue-stat.primary .stat-note {
+        color: white;
+    }
+
+    .revenue-card h3 {
+        margin-bottom: 20px;
+        color: #302a27;
+        font-size: 17px;
+        font-weight: 700;
+    }
+
+    .chart-container {
+        position: relative;
+        height: 320px;
+        width: 100%;
+    }
+
+    .revenue-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .revenue-table th,
+    .revenue-table td {
+        padding: 13px 12px;
+        border-bottom: 1px solid #eee8e0;
+        text-align: left;
+        font-size: 13px;
+    }
+
+    .revenue-table th {
+        color: #827970;
+        font-weight: 700;
+        background: #faf8f5;
+    }
+
+    .revenue-table td {
+        color: #403832;
+    }
+
+    .status-badge {
+        display: inline-block;
+        padding: 5px 10px;
+        border-radius: 20px;
+        font-size: 11px;
+        font-weight: 700;
+    }
+
+    .status-completed {
+        color: #18794e;
+        background: #e4f5eb;
+    }
+
+    .status-pending {
+        color: #946200;
+        background: #fff3cd;
+    }
+
+    .status-cancelled {
+        color: #b42318;
+        background: #fee4e2;
+    }
+
+    .revenue-message {
+        display: none;
+        padding: 13px 16px;
+        margin-bottom: 20px;
+        border-radius: 8px;
+        font-size: 13px;
+    }
+
+    .revenue-message.error {
+        display: block;
+        color: #842029;
+        background: #f8d7da;
+    }
+
+    .revenue-message.loading {
+        display: block;
+        color: #664d03;
+        background: #fff3cd;
+    }
+
+    .empty-row {
+        text-align: center !important;
+        color: #999 !important;
+        padding: 25px !important;
+    }
+
+    @media (max-width: 768px) {
+        .revenue-page {
+            padding: 16px;
+        }
+
+        .revenue-stat .stat-value {
+            font-size: 21px;
+        }
+
+        .chart-container {
+            height: 260px;
+        }
+    }
+</style>
+{% endblock %}
+
+
+{% block content %}
+<div class="revenue-page">
+    <div class="revenue-container">
+
+        <a href="/" class="revenue-back">← Quay lại trang chủ</a>
+
+        <div class="revenue-header">
+            <div>
+                <h1>Thống kê doanh thu</h1>
+                <p>Theo dõi tình hình kinh doanh của nhà hàng RESTOMENU</p>
+            </div>
+        </div>
+
+        <!-- BỘ LỌC NGÀY -->
+        <div class="filter-card">
+            <div class="row align-items-end g-3">
+                <div class="col-md-4">
+                    <label for="tuNgay">Từ ngày</label>
+                    <input type="date" id="tuNgay">
+                </div>
+
+                <div class="col-md-4">
+                    <label for="denNgay">Đến ngày</label>
+                    <input type="date" id="denNgay">
+                </div>
+
+                <div class="col-md-4 d-flex gap-2">
+                    <button class="btn-revenue" id="btnFilter">
+                        <span id="filterText">Thống kê</span>
+                    </button>
+
+                    <button class="btn-reset" id="btnReset">
+                        Làm mới
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div id="revenueMessage" class="revenue-message"></div>
+
+        <!-- CÁC CHỈ SỐ -->
+        <div class="row g-3 mb-2">
+
+            <div class="col-md-6 col-xl-3">
+                <div class="revenue-stat primary">
+                    <div class="stat-label">Tổng doanh thu</div>
+                    <div class="stat-value" id="totalRevenue">0 ₫</div>
+                    <div class="stat-note">Chỉ tính đơn đã hoàn thành</div>
+                </div>
+            </div>
+
+            <div class="col-md-6 col-xl-3">
+                <div class="revenue-stat">
+                    <div class="stat-label">Đơn hoàn thành</div>
+                    <div class="stat-value" id="completedOrders">0</div>
+                    <div class="stat-note">Đơn hàng đã hoàn tất</div>
+                </div>
+            </div>
+
+            <div class="col-md-6 col-xl-3">
+                <div class="revenue-stat">
+                    <div class="stat-label">Đơn đang chờ</div>
+                    <div class="stat-value" id="pendingOrders">0</div>
+                    <div class="stat-note">Mới và đang chuẩn bị</div>
+                </div>
+            </div>
+
+            <div class="col-md-6 col-xl-3">
+                <div class="revenue-stat">
+                    <div class="stat-label">Đơn đã hủy</div>
+                    <div class="stat-value" id="cancelledOrders">0</div>
+                    <div class="stat-note">Đơn hàng có trạng thái hủy</div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- GIÁ TRỊ TRUNG BÌNH -->
+        <div class="revenue-card">
+            <h3>Giá trị trung bình mỗi đơn hoàn thành</h3>
+            <div class="stat-value" id="averageOrder">0 ₫</div>
+        </div>
+
+        <!-- BIỂU ĐỒ -->
+        <div class="row g-3">
+
+            <div class="col-lg-8">
+                <div class="revenue-card">
+                    <h3>Doanh thu theo ngày</h3>
+                    <div class="chart-container">
+                        <canvas id="dailyChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-4">
+                <div class="revenue-card">
+                    <h3>Đơn hàng theo trạng thái</h3>
+                    <div class="chart-container">
+                        <canvas id="statusChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- BẢNG DOANH THU THEO THÁNG -->
+        <div class="revenue-card">
+            <h3>Chi tiết doanh thu theo tháng</h3>
+
+            <div class="table-responsive">
+                <table class="revenue-table">
+                    <thead>
+                        <tr>
+                            <th>Tháng</th>
+                            <th>Số đơn hoàn thành</th>
+                            <th>Doanh thu</th>
+                        </tr>
+                    </thead>
+
+                    <tbody id="monthlyTable">
+                        <tr>
+                            <td colspan="3" class="empty-row">
+                                Đang tải dữ liệu...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- BẢNG TRẠNG THÁI -->
+        <div class="revenue-card">
+            <h3>Chi tiết đơn hàng theo trạng thái</h3>
+
+            <div class="table-responsive">
+                <table class="revenue-table">
+                    <thead>
+                        <tr>
+                            <th>Trạng thái</th>
+                            <th>Số lượng đơn</th>
+                            <th>Tổng giá trị đơn</th>
+                        </tr>
+                    </thead>
+
+                    <tbody id="statusTable">
+                        <tr>
+                            <td colspan="3" class="empty-row">
+                                Đang tải dữ liệu...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}
+
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+
+    const TOKEN_KEY = "qltdnh_token";
+
+    const currency = new Intl.NumberFormat("vi-VN", {
+        style: "currency",
+        currency: "VND"
+    });
+
+    let dailyChart = null;
+    let statusChart = null;
+
+    const tuNgayInput = document.getElementById("tuNgay");
+    const denNgayInput = document.getElementById("denNgay");
+    const message = document.getElementById("revenueMessage");
+    const filterButton = document.getElementById("btnFilter");
+
+    function todayString() {
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, "0");
+        const day = String(now.getDate()).padStart(2, "0");
+
+        return `${year}-${month}-${day}`;
+    }
+
+    function firstDayOfMonth() {
+        const now = new Date();
+
+        return `${now.getFullYear()}-${String(
+            now.getMonth() + 1
+        ).padStart(2, "0")}-01`;
+    }
+
+    function showMessage(text, type = "error") {
+        message.textContent = text;
+        message.className = `revenue-message ${type}`;
+    }
+
+    function hideMessage() {
+        message.textContent = "";
+        message.className = "revenue-message";
+    }
+
+    function formatMoney(value) {
+        return currency.format(Number(value) || 0);
+    }
+
+    function formatNumber(value) {
+        return new Intl.NumberFormat("vi-VN").format(
+            Number(value) || 0
+        );
+    }
+
+    function getStatusName(status) {
+        const names = {
+            hoan_thanh: "Hoàn thành",
+            moi: "Mới",
+            dang_chuan_bi: "Đang chuẩn bị",
+            huy: "Đã hủy"
+        };
+
+        return names[String(status || "").toLowerCase()] || status;
+    }
+
+    function getStatusClass(status) {
+        const value = String(status || "").toLowerCase();
+
+        if (value === "hoan_thanh") return "status-completed";
+        if (value === "huy") return "status-cancelled";
+
+        return "status-pending";
+    }
+
+    function setText(id, value) {
+        const element = document.getElementById(id);
+
+        if (element) {
+            element.textContent = value;
+        }
+    }
+
+    function renderDailyChart(rows) {
+        const canvas = document.getElementById("dailyChart");
+
+        if (dailyChart) {
+            dailyChart.destroy();
+        }
+
+        dailyChart = new Chart(canvas, {
+            type: "bar",
+            data: {
+                labels: rows.map(item => item.Ngay),
+                datasets: [{
+                    label: "Doanh thu",
+                    data: rows.map(item => Number(item.DoanhThu) || 0),
+                    backgroundColor: "#641f2b",
+                    borderRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: context =>
+                                formatMoney(context.raw)
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: value =>
+                                new Intl.NumberFormat("vi-VN", {
+                                    notation: "compact"
+                                }).format(value) + " ₫"
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    function renderStatusChart(rows) {
+        const canvas = document.getElementById("statusChart");
+
+        if (statusChart) {
+            statusChart.destroy();
+        }
+
+        const labels = rows.map(item =>
+            getStatusName(item.TrangThai)
+        );
+
+        const values = rows.map(item =>
+            Number(item.SoDon) || 0
+        );
+
+        statusChart = new Chart(canvas, {
+            type: "doughnut",
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: values,
+                    backgroundColor: [
+                        "#23845b",
+                        "#d9a441",
+                        "#8a9aa9",
+                        "#b94a48"
+                    ],
+                    borderWidth: 2,
+                    borderColor: "#ffffff"
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: "bottom"
+                    }
+                }
+            }
+        });
+    }
+
+    function renderMonthlyTable(rows) {
+        const tbody = document.getElementById("monthlyTable");
+
+        if (!rows.length) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="3" class="empty-row">
+                        Không có dữ liệu doanh thu trong khoảng thời gian này.
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+
+        tbody.replaceChildren();
+
+        rows.forEach(item => {
+            const row = document.createElement("tr");
+
+            const month = document.createElement("td");
+            month.textContent =
+                `Tháng ${item.Thang}/${item.Nam}`;
+
+            const count = document.createElement("td");
+            count.textContent = formatNumber(item.SoDon);
+
+            const revenue = document.createElement("td");
+            revenue.textContent = formatMoney(item.DoanhThu);
+
+            row.append(month, count, revenue);
+            tbody.appendChild(row);
+        });
+    }
+
+    function renderStatusTable(rows) {
+        const tbody = document.getElementById("statusTable");
+
+        if (!rows.length) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="3" class="empty-row">
+                        Chưa có đơn hàng.
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+
+        tbody.replaceChildren();
+
+        rows.forEach(item => {
+            const row = document.createElement("tr");
+
+            const statusCell = document.createElement("td");
+            const badge = document.createElement("span");
+
+            badge.className =
+                `status-badge ${getStatusClass(item.TrangThai)}`;
+
+            badge.textContent = getStatusName(item.TrangThai);
+            statusCell.appendChild(badge);
+
+            const countCell = document.createElement("td");
+            countCell.textContent = formatNumber(item.SoDon);
+
+            const totalCell = document.createElement("td");
+            totalCell.textContent = formatMoney(item.TongTien);
+
+            row.append(statusCell, countCell, totalCell);
+            tbody.appendChild(row);
+        });
+    }
+
+    function renderOverview(data) {
+        const overview = Array.isArray(data.tong_quan)
+            ? (data.tong_quan[0] || {})
+            : (data.tong_quan || {});
+
+        setText(
+            "totalRevenue",
+            formatMoney(overview.TongDoanhThu)
+        );
+
+        setText(
+            "completedOrders",
+            formatNumber(overview.SoDonHoanThanh)
+        );
+
+        setText(
+            "averageOrder",
+            formatMoney(overview.TrungBinhDonHang)
+        );
+
+        const statuses = data.theo_trang_thai || [];
+
+        let pending = 0;
+        let cancelled = 0;
+
+        statuses.forEach(item => {
+            const status = String(item.TrangThai || "").toLowerCase();
+
+            if (status === "moi" || status === "dang_chuan_bi") {
+                pending += Number(item.SoDon) || 0;
+            }
+
+            if (status === "huy") {
+                cancelled += Number(item.SoDon) || 0;
+            }
+        });
+
+        setText("pendingOrders", formatNumber(pending));
+        setText("cancelledOrders", formatNumber(cancelled));
+    }
+
+    async function loadRevenue() {
+        hideMessage();
+
+        const token = localStorage.getItem(TOKEN_KEY);
+
+        if (!token) {
+            showMessage("Bạn chưa đăng nhập. Vui lòng đăng nhập lại.");
+            return;
+        }
+
+        const tuNgay = tuNgayInput.value;
+        const denNgay = denNgayInput.value;
+
+        if (tuNgay && denNgay && tuNgay > denNgay) {
+            showMessage("Ngày bắt đầu không được lớn hơn ngày kết thúc.");
+            return;
+        }
+
+        filterButton.disabled = true;
+        document.getElementById("filterText").textContent = "Đang tải...";
+
+        showMessage("Đang lấy dữ liệu doanh thu từ SQL Server...", "loading");
+
+        try {
+            const query = new URLSearchParams();
+
+            if (tuNgay) query.set("tu_ngay", tuNgay);
+            if (denNgay) query.set("den_ngay", denNgay);
+
+            const response = await fetch(
+                `/api/thong-ke/doanh-thu?${query.toString()}`,
+                {
+                    method: "GET",
+                    headers: {
+                        "Authorization": `Bearer ${token}`
+                    }
+                }
+            );
+
+            let result;
+
+            try {
+                result = await response.json();
+            } catch {
+                throw new Error("Máy chủ trả về dữ liệu không hợp lệ.");
+            }
+
+            if (response.status === 401) {
+                localStorage.removeItem("qltdnh_token");
+                localStorage.removeItem("qltdnh_user");
+
+                window.location.href = "/login";
+                return;
+            }
+
+            if (!response.ok || result.status !== "success") {
+                throw new Error(
+                    result.message || "Không thể tải thống kê doanh thu."
+                );
+            }
+
+            const data = result.data || {};
+
+            renderOverview(data);
+
+            const dailyRows = data.theo_ngay || [];
+            const monthlyRows = data.theo_thang || [];
+            const statusRows = data.theo_trang_thai || [];
+
+            renderDailyChart(dailyRows);
+            renderStatusChart(statusRows);
+            renderMonthlyTable(monthlyRows);
+            renderStatusTable(statusRows);
+
+            hideMessage();
+
+        } catch (error) {
+            console.error("Lỗi thống kê doanh thu:", error);
+            showMessage(error.message || "Có lỗi khi tải dữ liệu doanh thu.");
+
+        } finally {
+            filterButton.disabled = false;
+            document.getElementById("filterText").textContent = "Thống kê";
+        }
+    }
+
+    // Mặc định: từ đầu tháng đến hôm nay
+    tuNgayInput.value = firstDayOfMonth();
+    denNgayInput.value = todayString();
+
+    filterButton.addEventListener("click", loadRevenue);
+
+    document.getElementById("btnReset").addEventListener("click", function () {
+        tuNgayInput.value = firstDayOfMonth();
+        denNgayInput.value = todayString();
+
+        loadRevenue();
+    });
+
+    loadRevenue();
+});
+</script>
+{% endblock %}

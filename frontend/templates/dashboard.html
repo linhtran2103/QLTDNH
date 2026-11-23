@@ -3,9 +3,7 @@
 
 {% block extra_css %}
 <style>
-    * {
-        box-sizing: border-box;
-    }
+    * { box-sizing: border-box; }
 
     body {
         margin: 0;
@@ -13,7 +11,6 @@
         font-family: "Be Vietnam Pro", sans-serif;
     }
 
-    /* LAYOUT */
     .app-container {
         display: flex;
         width: 100%;
@@ -21,7 +18,6 @@
         align-items: stretch;
     }
 
-    /* SIDEBAR */
     .sidebar {
         width: 250px;
         min-width: 250px;
@@ -67,7 +63,6 @@
         letter-spacing: 2px;
     }
 
-    /* MENU DỌC */
     .sidebar-navigation {
         display: flex !important;
         flex-direction: column !important;
@@ -125,7 +120,6 @@
         padding-top: 25px;
     }
 
-    /* MAIN */
     .main-content {
         flex: 1;
         min-width: 0;
@@ -188,7 +182,6 @@
         font-size: 11px;
     }
 
-    /* WELCOME */
     .welcome {
         display: flex;
         justify-content: space-between;
@@ -204,9 +197,7 @@
         color: #fff;
     }
 
-    .welcome-content {
-        max-width: 600px;
-    }
+    .welcome-content { max-width: 600px; }
 
     .welcome-label {
         color: #d5b36b;
@@ -250,7 +241,6 @@
         font-size: 75px;
     }
 
-    /* SECTION */
     .dashboard-section-heading {
         margin: 28px 0 17px;
     }
@@ -276,7 +266,6 @@
         font-size: 12px;
     }
 
-    /* STATISTICS */
     .stats-grid {
         display: grid;
         grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -322,7 +311,6 @@
         font-weight: 700;
     }
 
-    /* QUICK ACTIONS */
     .content-card.dashboard-actions {
         margin-top: 25px;
         padding: 23px;
@@ -401,7 +389,6 @@
         text-align: center;
     }
 
-    /* RESPONSIVE */
     @media (max-width: 1100px) {
         .stats-grid {
             grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -413,9 +400,7 @@
     }
 
     @media (max-width: 768px) {
-        .app-container {
-            flex-direction: column;
-        }
+        .app-container { flex-direction: column; }
 
         .sidebar {
             width: 100%;
@@ -433,13 +418,9 @@
             padding: 20px 16px;
         }
 
-        .welcome {
-            padding: 25px;
-        }
+        .welcome { padding: 25px; }
 
-        .welcome-icon {
-            display: none;
-        }
+        .welcome-icon { display: none; }
     }
 
     @media (max-width: 480px) {
@@ -448,13 +429,9 @@
             grid-template-columns: 1fr;
         }
 
-        .topbar {
-            align-items: flex-start;
-        }
+        .topbar { align-items: flex-start; }
 
-        .admin-details {
-            display: none;
-        }
+        .admin-details { display: none; }
     }
 </style>
 {% endblock %}
@@ -496,7 +473,7 @@
                 <span>Quản lý đơn hàng</span>
             </a>
 
-            <a href="#" class="menu-item">
+            <a href="/revenue" class="menu-item">
                 <span class="menu-icon">▥</span>
                 <span>Thống kê doanh thu</span>
             </a>
@@ -656,7 +633,7 @@
                     <span class="quick-action-arrow">›</span>
                 </a>
 
-                <a href="#" class="quick-action-item">
+                <a href="/revenue" class="quick-action-item">
                     <span class="quick-action-icon">▥</span>
                     <div>
                         <h4>Thống kê doanh thu</h4>
