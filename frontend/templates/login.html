@@ -4,42 +4,321 @@
 {% block title %}Đăng nhập - QLTDNH{% endblock %}
 
 {% block content %}
-<div class="container d-flex justify-content-center align-items-center min-vh-100">
-    <div class="card shadow p-4" style="width: 100%; max-width: 420px;">
-        <div class="text-center mb-4">
-            <h3 class="fw-bold">QLTDNH</h3>
-            <p class="text-muted">Hệ thống quản lý thực đơn nhà hàng</p>
+
+<style>
+    .login-page {
+        min-height: 100vh;
+        display: flex;
+        background: #f5f1e9;
+        font-family: "Segoe UI", sans-serif;
+    }
+
+    .login-left {
+        width: 52%;
+        min-height: 100vh;
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        padding: 55px;
+        overflow: hidden;
+        color: #fffaf0;
+        background:
+            linear-gradient(135deg, rgba(8, 29, 43, .94),
+            rgba(13, 48, 61, .78)),
+            url("https://images.unsplash.com/photo-1579027989536-b7b1f875659b?auto=format&fit=crop&w=1400&q=85")
+            center/cover;
+    }
+
+    .login-brand {
+        font-size: 25px;
+        font-weight: 800;
+        letter-spacing: 3px;
+    }
+
+    .login-brand span {
+        color: #d94b40;
+    }
+
+    .login-intro {
+        max-width: 520px;
+        position: relative;
+        z-index: 1;
+    }
+
+    .login-intro .small-title {
+        color: #e8a69b;
+        font-size: 13px;
+        letter-spacing: 4px;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+
+    .login-intro h1 {
+        font-size: clamp(34px, 4vw, 55px);
+        font-weight: 800;
+        line-height: 1.2;
+        margin: 18px 0;
+    }
+
+    .login-intro p {
+        color: #e1e5e5;
+        font-size: 16px;
+        line-height: 1.8;
+    }
+
+    .login-footer {
+        color: #c5d0d0;
+        font-size: 12px;
+    }
+
+    .login-right {
+        width: 48%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 40px 25px;
+    }
+
+    .login-card {
+        width: 100%;
+        max-width: 420px;
+    }
+
+    .login-heading {
+        margin-bottom: 35px;
+    }
+
+    .login-heading .welcome {
+        color: #b54a40;
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+    }
+
+    .login-heading h2 {
+        color: #102d3a;
+        font-size: 34px;
+        font-weight: 800;
+        margin: 10px 0;
+    }
+
+    .login-heading p {
+        color: #7b8588;
+        font-size: 14px;
+    }
+
+    .login-field {
+        margin-bottom: 22px;
+    }
+
+    .login-field label {
+        display: block;
+        color: #263e48;
+        font-weight: 600;
+        font-size: 14px;
+        margin-bottom: 9px;
+    }
+
+    .login-input-wrap {
+        position: relative;
+    }
+
+    .login-input {
+        width: 100%;
+        height: 52px;
+        border: 1px solid #deded7;
+        border-radius: 10px;
+        padding: 0 15px;
+        background: #fffefa;
+        color: #18313d;
+        outline: none;
+        transition: .25s;
+    }
+
+    .login-input:focus {
+        border-color: #b64b40;
+        box-shadow: 0 0 0 3px rgba(182, 75, 64, .10);
+    }
+
+    .login-input::placeholder {
+        color: #aab0af;
+    }
+
+    .password-input {
+        padding-right: 65px;
+    }
+
+    .toggle-password {
+        position: absolute;
+        right: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        border: none;
+        background: transparent;
+        color: #8b9697;
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+    }
+
+    .toggle-password:hover {
+        color: #b64b40;
+    }
+
+    .login-button {
+        width: 100%;
+        height: 53px;
+        border: none;
+        border-radius: 10px;
+        background: #b74338;
+        color: white;
+        font-weight: 700;
+        font-size: 16px;
+        letter-spacing: .5px;
+        cursor: pointer;
+        transition: .25s;
+        margin-top: 5px;
+    }
+
+    .login-button:hover {
+        background: #96372f;
+        transform: translateY(-2px);
+        box-shadow: 0 8px 18px rgba(183, 67, 56, .2);
+    }
+
+    .login-note {
+        text-align: center;
+        margin-top: 25px;
+        color: #929a98;
+        font-size: 12px;
+    }
+
+    @media (max-width: 850px) {
+        .login-left {
+            display: none;
+        }
+
+        .login-right {
+            width: 100%;
+            min-height: 100vh;
+            padding: 30px 22px;
+        }
+    }
+</style>
+
+<div class="login-page">
+
+    <!-- BÊN TRÁI: GIỚI THIỆU NHÀ HÀNG -->
+    <section class="login-left">
+
+        
+
+        <div class="login-intro">
+            <div class="small-title">Japanese Restaurant System</div>
+
+            <h1>
+                Tinh hoa ẩm thực Nhật Bản
+            </h1>
+
+            <p>
+                Hệ thống quản lý thực đơn nhà hàng Nhật Bản.
+                Quản lý món ăn, đơn hàng và hoạt động phục vụ
+                một cách chuyên nghiệp, thuận tiện và hiệu quả.
+            </p>
         </div>
 
-        <form id="loginForm">
-            <div class="mb-3">
-                <label for="username" class="form-label">Tên đăng nhập</label>
-                <input
-                    type="text"
-                    class="form-control"
-                    id="username"
-                    placeholder="Nhập tên đăng nhập"
-                    required
-                >
+        <div class="login-footer">
+            © 2026 QLTDNH - Hệ thống quản lý thực đơn nhà hàng
+        </div>
+
+    </section>
+
+
+    <!-- BÊN PHẢI: FORM ĐĂNG NHẬP -->
+    <section class="login-right">
+
+        <div class="login-card">
+
+            <div class="login-heading">
+                <div class="welcome">Welcome Back</div>
+
+                <h2>Đăng nhập</h2>
+
+                <p>
+                    Vui lòng nhập thông tin tài khoản để tiếp tục.
+                </p>
             </div>
 
-            <div class="mb-3">
-                <label for="password" class="form-label">Mật khẩu</label>
-                <input
-                    type="password"
-                    class="form-control"
-                    id="password"
-                    placeholder="Nhập mật khẩu"
-                    required
-                >
+            <form id="loginForm">
+
+                <div class="login-field">
+                    <label for="username">Tên đăng nhập</label>
+
+                    <input
+                        type="text"
+                        class="login-input"
+                        id="username"
+                        placeholder="Nhập tên đăng nhập"
+                        autocomplete="username"
+                        required
+                    >
+                </div>
+
+                <div class="login-field">
+                    <label for="password">Mật khẩu</label>
+
+                    <div class="login-input-wrap">
+                        <input
+                            type="password"
+                            class="login-input password-input"
+                            id="password"
+                            placeholder="Nhập mật khẩu"
+                            autocomplete="current-password"
+                            required
+                        >
+
+                        <button
+                            type="button"
+                            class="toggle-password"
+                            id="togglePassword"
+                        >
+                            Hiện
+                        </button>
+                    </div>
+                </div>
+
+                <div id="loginMessage" class="mb-3" role="alert"></div>
+
+                <button type="submit" class="login-button">
+                    ĐĂNG NHẬP
+                </button>
+
+            </form>
+
+            <div class="login-note">
+                QLTDNH · Quản lý thực đơn nhà hàng Nhật Bản
             </div>
 
-            <div id="loginMessage" class="mb-3" role="alert"></div>
+        </div>
 
-            <button type="submit" class="btn btn-primary w-100">
-                Đăng nhập
-            </button>
-        </form>
-    </div>
+    </section>
+
 </div>
+
+<script>
+    const togglePassword = document.getElementById("togglePassword");
+    const passwordInput = document.getElementById("password");
+
+    if (togglePassword && passwordInput) {
+        togglePassword.addEventListener("click", function () {
+            const isHidden = passwordInput.type === "password";
+
+            passwordInput.type = isHidden ? "text" : "password";
+            togglePassword.textContent = isHidden ? "Ẩn" : "Hiện";
+        });
+    }
+</script>
+
 {% endblock %}

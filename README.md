@@ -278,6 +278,9 @@ Chạy ứng dụng:
 
 ```powershell
 python app.py
+hoặc 
+python -m backend.app
+
 ```
 
 Hoặc chạy từ thư mục gốc dự án:
