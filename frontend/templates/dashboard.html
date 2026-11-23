@@ -1,216 +1,677 @@
 
 {% extends "base.html" %}
 
-{% block title %}Tổng quan | RestoMenu{% endblock %}
+{% block extra_css %}
+<style>
+    * {
+        box-sizing: border-box;
+    }
+
+    body {
+        margin: 0;
+        background: #f8f5ef;
+        font-family: "Be Vietnam Pro", sans-serif;
+    }
+
+    /* LAYOUT */
+    .app-container {
+        display: flex;
+        width: 100%;
+        min-height: 100vh;
+        align-items: stretch;
+    }
+
+    /* SIDEBAR */
+    .sidebar {
+        width: 250px;
+        min-width: 250px;
+        min-height: 100vh;
+        padding: 28px 18px;
+        display: flex;
+        flex-direction: column;
+        flex-shrink: 0;
+        background: #641f2b;
+        color: #fff;
+    }
+
+    .brand {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 42px;
+    }
+
+    .brand-icon {
+        color: #d5b36b;
+        font-size: 30px;
+    }
+
+    .brand-text h3 {
+        margin: 0;
+        color: #fff;
+        font-size: 18px;
+        font-weight: 700;
+    }
+
+    .brand-text p {
+        margin: 4px 0 0;
+        color: #e5c9bd;
+        font-size: 11px;
+    }
+
+    .menu-label {
+        margin: 0 0 14px 10px;
+        color: #d8b9ad;
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 2px;
+    }
+
+    /* MENU DỌC */
+    .sidebar-navigation {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: stretch !important;
+        justify-content: flex-start !important;
+        flex-wrap: nowrap !important;
+        gap: 8px !important;
+        width: 100% !important;
+        margin: 0;
+        padding: 0;
+    }
+
+    .menu-item {
+        display: flex !important;
+        flex-direction: row !important;
+        align-items: center !important;
+        justify-content: flex-start !important;
+        gap: 13px;
+        width: 100% !important;
+        min-height: 47px;
+        padding: 12px 14px;
+        margin: 0;
+        flex: 0 0 auto !important;
+        border-radius: 8px;
+        color: #f7ece7;
+        text-decoration: none;
+        font-size: 13px;
+        white-space: nowrap;
+        transition: .2s ease;
+    }
+
+    .menu-item:hover,
+    .menu-item.active {
+        background: rgba(255,255,255,.14);
+        color: #fff;
+    }
+
+    .menu-item.active {
+        border-left: 3px solid #d5b36b;
+    }
+
+    .menu-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 22px;
+        min-width: 22px;
+        color: #d5b36b;
+        font-size: 17px;
+    }
+
+    .sidebar-bottom {
+        width: 100%;
+        margin-top: auto;
+        padding-top: 25px;
+    }
+
+    /* MAIN */
+    .main-content {
+        flex: 1;
+        min-width: 0;
+        padding: 30px 36px;
+    }
+
+    .topbar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 20px;
+        margin-bottom: 28px;
+    }
+
+    .topbar-title {
+        margin: 0;
+        color: #302a27;
+        font-size: 23px;
+        font-weight: 700;
+    }
+
+    .topbar-caption {
+        margin-top: 5px;
+        color: #827970;
+        font-size: 12px;
+    }
+
+    .admin-info {
+        display: flex;
+        align-items: center;
+        gap: 11px;
+    }
+
+    .avatar {
+        width: 42px;
+        height: 42px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        background: #641f2b;
+        color: #fff;
+        font-weight: 700;
+    }
+
+    .admin-details {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .admin-details [data-user-name] {
+        color: #302a27;
+        font-size: 13px;
+        font-weight: 700;
+    }
+
+    .admin-details [data-user-role] {
+        color: #827970;
+        font-size: 11px;
+    }
+
+    /* WELCOME */
+    .welcome {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 20px;
+        min-height: 220px;
+        padding: 35px 40px;
+        margin-bottom: 30px;
+        border-radius: 15px;
+        background:
+            linear-gradient(90deg, rgba(65,19,29,.96), rgba(100,31,43,.83)),
+            url("/static/images/japan-banner.png") center/cover;
+        color: #fff;
+    }
+
+    .welcome-content {
+        max-width: 600px;
+    }
+
+    .welcome-label {
+        color: #d5b36b;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 3px;
+    }
+
+    .welcome h1 {
+        margin: 12px 0;
+        color: #fff;
+        font-family: "Noto Serif JP", serif;
+        font-size: 34px;
+    }
+
+    .welcome p {
+        margin-bottom: 20px;
+        color: #f0e4dc;
+        font-size: 13px;
+        line-height: 1.8;
+    }
+
+    .primary-btn {
+        display: inline-block;
+        padding: 11px 20px;
+        border-radius: 7px;
+        background: #d5b36b;
+        color: #48151f;
+        font-size: 12px;
+        font-weight: 700;
+        text-decoration: none;
+    }
+
+    .primary-btn:hover {
+        background: #e5ca8d;
+        color: #48151f;
+    }
+
+    .welcome-icon {
+        color: #d5b36b;
+        font-size: 75px;
+    }
+
+    /* SECTION */
+    .dashboard-section-heading {
+        margin: 28px 0 17px;
+    }
+
+    .section-eyebrow {
+        margin-bottom: 6px;
+        color: #a17d43;
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 2px;
+    }
+
+    .dashboard-section-heading h2 {
+        margin: 0;
+        color: #302a27;
+        font-size: 19px;
+        font-weight: 700;
+    }
+
+    .dashboard-section-heading p {
+        margin: 5px 0 0;
+        color: #827970;
+        font-size: 12px;
+    }
+
+    /* STATISTICS */
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 17px;
+    }
+
+    .stat-card {
+        padding: 21px;
+        border: 1px solid #e9e1d6;
+        border-radius: 12px;
+        background: #fff;
+        box-shadow: 0 4px 15px rgba(55,35,25,.035);
+    }
+
+    .stat-card-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 18px;
+    }
+
+    .stat-icon {
+        width: 43px;
+        height: 43px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 10px;
+        background: #f5eee5;
+        color: #641f2b;
+        font-size: 20px;
+    }
+
+    .stat-label {
+        color: #827970;
+        font-size: 12px;
+    }
+
+    .stat-card h3 {
+        margin: 0;
+        color: #302a27;
+        font-size: 27px;
+        font-weight: 700;
+    }
+
+    /* QUICK ACTIONS */
+    .content-card.dashboard-actions {
+        margin-top: 25px;
+        padding: 23px;
+        border: 1px solid #e9e1d6;
+        border-radius: 12px;
+        background: #fff;
+    }
+
+    .card-heading {
+        margin-bottom: 18px;
+        color: #302a27;
+        font-size: 18px;
+        font-weight: 700;
+    }
+
+    .quick-action-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 14px;
+    }
+
+    .quick-action-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 15px;
+        border: 1px solid #e9e1d6;
+        border-radius: 10px;
+        background: #fffdfa;
+        color: #302a27;
+        text-decoration: none;
+        transition: .2s ease;
+    }
+
+    .quick-action-item:hover {
+        border-color: #c6a15b;
+        background: #fbf6ed;
+        transform: translateY(-2px);
+    }
+
+    .quick-action-icon {
+        width: 40px;
+        height: 40px;
+        min-width: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 9px;
+        background: #f2e8dc;
+        color: #641f2b;
+        font-size: 18px;
+    }
+
+    .quick-action-item h4 {
+        margin: 0 0 4px;
+        color: #302a27;
+        font-size: 13px;
+        font-weight: 700;
+    }
+
+    .quick-action-item p {
+        margin: 0;
+        color: #827970;
+        font-size: 11px;
+    }
+
+    .quick-action-arrow {
+        margin-left: auto;
+        color: #c6a15b;
+    }
+
+    .page-footer {
+        padding: 25px 0 5px;
+        color: #827970;
+        font-size: 11px;
+        text-align: center;
+    }
+
+    /* RESPONSIVE */
+    @media (max-width: 1100px) {
+        .stats-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .quick-action-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+    }
+
+    @media (max-width: 768px) {
+        .app-container {
+            flex-direction: column;
+        }
+
+        .sidebar {
+            width: 100%;
+            min-width: 0;
+            min-height: auto;
+        }
+
+        .sidebar-bottom {
+            margin-top: 15px;
+            padding-top: 10px;
+        }
+
+        .main-content {
+            width: 100%;
+            padding: 20px 16px;
+        }
+
+        .welcome {
+            padding: 25px;
+        }
+
+        .welcome-icon {
+            display: none;
+        }
+    }
+
+    @media (max-width: 480px) {
+        .stats-grid,
+        .quick-action-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .topbar {
+            align-items: flex-start;
+        }
+
+        .admin-details {
+            display: none;
+        }
+    }
+</style>
+{% endblock %}
 
 {% block content %}
-
 <div class="app-container">
 
-    <!-- SIDEBAR -->
     <aside class="sidebar">
+
         <div class="brand">
-            <div class="brand-icon">日</div>
-            <div>
-                <h3>RestoMenu</h3>
-                <span>JAPANESE RESTAURANT</span>
+            <div class="brand-icon">✿</div>
+            <div class="brand-text">
+                <h3>RESTOMENU</h3>
+                <p>Japanese Restaurant</p>
             </div>
         </div>
 
         <p class="menu-label">MENU CHÍNH</p>
 
-        <a href="/" class="menu-item active">
-            <span>⌂</span> Tổng quan
-        </a>
+        <nav class="sidebar-navigation">
 
-        <a href="/foods" class="menu-item">
-            <span>◈</span> Quản lý món ăn
-        </a>
+            <a href="/" class="menu-item active">
+                <span class="menu-icon">⌂</span>
+                <span>Trang chủ</span>
+            </a>
 
-        <a href="/categories" class="menu-item">
-            <span>▦</span> Danh mục
-        </a>
+            <a href="/categories" class="menu-item">
+                <span class="menu-icon">▦</span>
+                <span>Quản lý danh mục</span>
+            </a>
+
+            <a href="/tables" class="menu-item">
+                <span class="menu-icon">▤</span>
+                <span>Quản lý bàn ăn</span>
+            </a>
+
+            <a href="/orders" class="menu-item">
+                <span class="menu-icon">▣</span>
+                <span>Quản lý đơn hàng</span>
+            </a>
+
+            <a href="#" class="menu-item">
+                <span class="menu-icon">▥</span>
+                <span>Thống kê doanh thu</span>
+            </a>
+
+            <a href="/users" class="menu-item">
+                <span class="menu-icon">♙</span>
+                <span>Quản lý nhân viên</span>
+            </a>
+
+            <a href="#" class="menu-item">
+                <span class="menu-icon">⚙</span>
+                <span>Cài đặt</span>
+            </a>
+
+        </nav>
 
         <div class="sidebar-bottom">
-            <span class="sidebar-bottom-icon">✦</span>
-            <div>
-                <strong>RESTOMENU SYSTEM</strong>
-                <small>Restaurant Management</small>
-            </div>
+            <a href="#" class="menu-item" data-logout>
+                <span class="menu-icon">⇥</span>
+                <span>Đăng xuất</span>
+            </a>
         </div>
+
     </aside>
 
-    <!-- MAIN CONTENT -->
     <main class="main-content">
 
-        <!-- TOPBAR -->
         <header class="topbar">
             <div>
-                <span class="topbar-caption">RESTAURANT MANAGEMENT SYSTEM</span>
-                <h2>Tổng quan hệ thống</h2>
+                <h2 class="topbar-title">Tổng quan</h2>
+                <p class="topbar-caption">
+                    Chào mừng bạn đến với hệ thống quản lý nhà hàng
+                </p>
             </div>
 
             <div class="admin-info">
                 <div class="avatar">A</div>
-                <div>
-                    <strong data-user-name>Quản trị viên</strong>
-                    <small data-user-role>Administrator</small>
+                <div class="admin-details">
+                    <span data-user-name>Quản trị viên</span>
+                    <span data-user-role>Administrator</span>
                 </div>
-                <a href="#" class="secondary-btn" data-logout>Đăng xuất</a>
             </div>
         </header>
 
-       <!-- HERO BANNER -->
-<section class="welcome">
-    <div class="welcome-content">
-        <span class="welcome-label">WELCOME TO RESTOMENU</span>
+        <section class="welcome">
+            <div class="welcome-content">
+                <span class="welcome-label">IRASSHAIMASE</span>
 
-        <h1>NGHỆ THUẬT<br>ẨM THỰC NHẬT</h1>
+                <h1>Chào mừng đến với RESTOMENU</h1>
 
-        <p>
-            Quản lý thực đơn tinh gọn.
-            Kiến tạo trải nghiệm ẩm thực hoàn hảo.
-        </p>
+                <p>
+                    Quản lý nhà hàng của bạn dễ dàng và hiệu quả.
+                    Theo dõi thực đơn, bàn ăn và hoạt động kinh doanh
+                    trên cùng một hệ thống.
+                </p>
 
-        <a href="/foods" class="primary-btn">
-            Khám phá thực đơn <span>→</span>
-        </a>
-    </div>
-
-    <div class="welcome-icon">
-        <span>和</span>
-        <small>JAPANESE CUISINE</small>
-    </div>
-</section>
-        <!-- PAGE INTRODUCTION -->
-        <div class="dashboard-section-heading">
-            <div>
-                <span class="section-eyebrow">SYSTEM OVERVIEW</span>
-                <h3>Tổng quan hệ thống</h3>
-                <p>Các thông tin chính trong hoạt động quản lý thực đơn.</p>
-            </div>
-        </div>
-
-        <!-- STATISTICS -->
-        <section class="stats-grid">
-
-            <div class="stat-card">
-                <div class="stat-card-top">
-                    <div class="stat-icon">◈</div>
-                    <span class="stat-label">MENU</span>
-                </div>
-                <p>Tổng số món ăn</p>
-                <h2 id="totalFoods">0</h2>
-                <small>Số món trong thực đơn</small>
+                <a href="/foods/add" class="primary-btn">
+                    + Thêm món ăn mới
+                </a>
             </div>
 
-            <div class="stat-card">
-                <div class="stat-card-top">
-                    <div class="stat-icon">▦</div>
-                    <span class="stat-label">CATEGORY</span>
-                </div>
-                <p>Tổng danh mục</p>
-                <h2 id="totalCategories">0</h2>
-                <small>Các nhóm món ăn</small>
-            </div>
-
-            <div class="stat-card">
-                <div class="stat-card-top">
-                    <div class="stat-icon">✓</div>
-                    <span class="stat-label">ACTIVE</span>
-                </div>
-                <p>Đang phục vụ</p>
-                <h2 id="availableFoods">0</h2>
-                <small>Món đang kinh doanh</small>
-            </div>
-
-            <div class="stat-card">
-                <div class="stat-card-top">
-                    <div class="stat-icon">−</div>
-                    <span class="stat-label">INACTIVE</span>
-                </div>
-                <p>Ngừng phục vụ</p>
-                <h2 id="unavailableFoods">0</h2>
-                <small>Món tạm ngừng kinh doanh</small>
-            </div>
-
+            <div class="welcome-icon">和</div>
         </section>
 
-        <!-- QUICK ACTIONS -->
-        <section class="content-card dashboard-actions">
-            <div class="card-heading">
-                <div>
-                    <span class="section-eyebrow">QUICK ACCESS</span>
-                    <h3>Truy cập nhanh</h3>
-                    <p>Lựa chọn chức năng bạn muốn sử dụng.</p>
-                </div>
+        <section>
+            <div class="dashboard-section-heading">
+                <span class="section-eyebrow">BUSINESS OVERVIEW</span>
+                <h2>Tổng quan hoạt động</h2>
+                <p>Theo dõi tình hình thực đơn nhà hàng</p>
             </div>
+
+            <div class="stats-grid">
+
+                <div class="stat-card">
+                    <div class="stat-card-top">
+                        <span class="stat-label">Tổng số món ăn</span>
+                        <span class="stat-icon">♨</span>
+                    </div>
+                    <h3 id="totalFoods">0</h3>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-card-top">
+                        <span class="stat-label">Danh mục</span>
+                        <span class="stat-icon">▦</span>
+                    </div>
+                    <h3 id="totalCategories">0</h3>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-card-top">
+                        <span class="stat-label">Món đang bán</span>
+                        <span class="stat-icon">✓</span>
+                    </div>
+                    <h3 id="availableFoods">0</h3>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-card-top">
+                        <span class="stat-label">Món ngừng bán</span>
+                        <span class="stat-icon">－</span>
+                    </div>
+                    <h3 id="unavailableFoods">0</h3>
+                </div>
+
+            </div>
+        </section>
+
+        <section class="content-card dashboard-actions">
+
+            <div class="card-heading">Truy cập nhanh</div>
 
             <div class="quick-action-grid">
 
                 <a href="/foods" class="quick-action-item">
-                    <div class="quick-action-icon">◈</div>
+                    <span class="quick-action-icon">♨</span>
                     <div>
                         <h4>Quản lý món ăn</h4>
-                        <p>Xem, thêm và cập nhật món ăn.</p>
+                        <p>Xem và cập nhật thực đơn</p>
                     </div>
-                    <span class="quick-action-arrow">→</span>
+                    <span class="quick-action-arrow">›</span>
                 </a>
 
                 <a href="/categories" class="quick-action-item">
-                    <div class="quick-action-icon">▦</div>
+                    <span class="quick-action-icon">▦</span>
                     <div>
                         <h4>Quản lý danh mục</h4>
-                        <p>Sắp xếp các nhóm món ăn.</p>
+                        <p>Sắp xếp danh mục món ăn</p>
                     </div>
-                    <span class="quick-action-arrow">→</span>
+                    <span class="quick-action-arrow">›</span>
                 </a>
 
-                <a href="/foods/add" class="quick-action-item" data-roles="admin,manager">
-                    <div class="quick-action-icon">＋</div>
+                <a href="/tables" class="quick-action-item">
+                    <span class="quick-action-icon">▤</span>
                     <div>
-                        <h4>Thêm món mới</h4>
-                        <p>Bổ sung món ăn vào thực đơn.</p>
+                        <h4>Quản lý bàn ăn</h4>
+                        <p>Theo dõi trạng thái bàn</p>
                     </div>
-                    <span class="quick-action-arrow">→</span>
+                    <span class="quick-action-arrow">›</span>
                 </a>
 
                 <a href="/orders" class="quick-action-item">
-                    <div class="quick-action-icon">▤</div>
+                    <span class="quick-action-icon">▣</span>
                     <div>
-                        <h4>Đơn gọi món</h4>
-                        <p>Xem và cập nhật trạng thái đơn từ khách.</p>
+                        <h4>Quản lý đơn hàng</h4>
+                        <p>Theo dõi đơn hàng</p>
                     </div>
-                    <span class="quick-action-arrow">→</span>
+                    <span class="quick-action-arrow">›</span>
                 </a>
 
-                <a href="/tables" class="quick-action-item" data-roles="admin,manager">
-                    <div class="quick-action-icon">▦</div>
+                <a href="/users" class="quick-action-item">
+                    <span class="quick-action-icon">♙</span>
                     <div>
-                        <h4>Bàn và mã QR</h4>
-                        <p>Đổi tên bàn và in mã QR gọi món.</p>
+                        <h4>Quản lý nhân viên</h4>
+                        <p>Thông tin nhân viên</p>
                     </div>
-                    <span class="quick-action-arrow">→</span>
+                    <span class="quick-action-arrow">›</span>
                 </a>
 
-                <a href="/users" class="quick-action-item" data-roles="admin">
-                    <div class="quick-action-icon">♙</div>
+                <a href="#" class="quick-action-item">
+                    <span class="quick-action-icon">▥</span>
                     <div>
-                        <h4>Tài khoản nhân sự</h4>
-                        <p>Tạo tài khoản quản lý và nhân viên.</p>
+                        <h4>Thống kê doanh thu</h4>
+                        <p>Theo dõi kết quả kinh doanh</p>
                     </div>
-                    <span class="quick-action-arrow">→</span>
+                    <span class="quick-action-arrow">›</span>
                 </a>
 
             </div>
         </section>
 
-        <!-- FOOTER -->
         <footer class="page-footer">
-            RESTOMENU <span>•</span> JAPANESE RESTAURANT MANAGEMENT
+            RESTOMENU © 2026 | Japanese Restaurant Management System
         </footer>
 
     </main>
 </div>
-
 {% endblock %}
