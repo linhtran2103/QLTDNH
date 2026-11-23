@@ -278,7 +278,8 @@ Chạy ứng dụng:
 
 ```powershell
 python app.py
-
+hoặc 
+python -m backend.app
 
 ```
 
